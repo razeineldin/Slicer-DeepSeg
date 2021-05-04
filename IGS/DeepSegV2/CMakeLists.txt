@@ -4,12 +4,6 @@ set(MODULE_NAME DeepSegV2)
 #-----------------------------------------------------------------------------
 set(MODULE_PYTHON_SCRIPTS
   ${MODULE_NAME}.py
-  #config.py
-  #preprocess.py
-  #predict.py
-  #models.py
-  #Weights
-  #BraTS20_sample_case
   )
 
 set(MODULE_PYTHON_RESOURCES

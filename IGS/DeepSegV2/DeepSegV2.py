@@ -348,16 +348,28 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     """
     Run processing when user clicks "Apply" button.
     """
-    try:
 
+    try:
       # Compute output
       #print("Hello DeepSegV2")
-      self.logic.norm_image(self.ui.FLAIRSelector.currentNode(), self.ui.outputSelector.currentNode())
+      import time
+      startTime = time.time()
+      logging.info('Processing started')
+
+      #slicer.util.updateVolumeFromArray(outputVolume, img)
+
+      img_norm = self.logic.norm_image(self.ui.FLAIRSelector.currentNode())
+      slicer.util.updateVolumeFromArray(self.ui.outputSelector.currentNode(), img_norm)
+      #self.logic.norm_image(self.ui.FLAIRSelector.currentNode(), self.ui.outputSelector.currentNode())
       #self.logic.preprocess_images(input_dir=config['input_dir'], preprocess_dir=config['preprocess_dir'], images=config["images"], dim=config["image_shape"])
 
 
       #self.logic.process(self.ui.FLAIRSelector.currentNode(), self.ui.outputSelector.currentNode(),
       #  self.ui.imageThresholdSliderWidget.value, self.ui.invertOutputCheckBox.checked)
+
+
+      stopTime = time.time()
+      logging.info('Processing completed in {0:.2f} seconds'.format(stopTime-startTime))
 
     except Exception as e:
       slicer.util.errorDisplay("Failed to compute results: "+str(e))
@@ -408,13 +420,9 @@ class DeepSegV2Logic(ScriptedLoadableModuleLogic):
         img = (img - np.min(img))/img_ptp
     return img"""
 
-  def norm_image(self, inputVolume, outputVolume, norm_type = "norm"):
-    if not inputVolume or not outputVolume:
-      raise ValueError("Input or output volume is invalid")
-
-    import time
-    startTime = time.time()
-    logging.info('Processing started')
+  def norm_image(self, inputVolume, norm_type = "norm"):
+    if not inputVolume: # or not outputVolume:
+      raise ValueError("Input volume is invalid")
 
     # Compute the thresholded output volume using the "Threshold Scalar Volume" CLI module
     #img = slicer.util.addVolumeFromArray(inputVolume)
@@ -431,12 +439,8 @@ class DeepSegV2Logic(ScriptedLoadableModuleLogic):
 #         img = (img - np.min(img))/(np.max(img) - np.min(img))
         img_ptp = 1 if np.ptp(img)== 0 else np.ptp(img) 
         img = (img - np.min(img))/img_ptp
-    slicer.util.updateVolumeFromArray(outputVolume, img)
-    #outputVolume = img
 
-    stopTime = time.time()
-    logging.info('Processing completed in {0:.2f} seconds'.format(stopTime-startTime))
-
+    return img
 
   def preprocess_images(self, input_dir, preprocess_dir, images, dim=config["image_shape"]):
     for img in images:
