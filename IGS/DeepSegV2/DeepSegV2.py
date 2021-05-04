@@ -4,6 +4,7 @@ import logging
 import vtk, qt, ctk, slicer
 
 # DeepSegV2 imports
+"""
 try:
   import matplotlib.pyplot as plt
 except:
@@ -35,14 +36,18 @@ try:
 except:
   slicer.util.pip_install('tensorflow')
   import tensorflow as tf
+"""
+import numpy as np
+import nibabel as nib
 
-#import numpy as np
-#import nibabel as nib
-#import tensorflow as tf
+import sys
+sys.argv = ['pdm']
+import tensorflow.python
+import tensorflow as tf
 
 # utlity functions imports
-#import matplotlib.pyplot as plt
-#from nilearn.image import crop_img as crop_image
+import matplotlib.pyplot as plt
+from nilearn.image import crop_img as crop_image
 
 
 from slicer.ScriptedLoadableModule import *
@@ -52,26 +57,8 @@ from slicer.util import VTKObservationMixin
 config = dict()
 
 # define input
-config["image_shape"] = (192, 224, 160) # the input to the pre-trained model
-
-#config["input_dir"] = 'BraTS20_sample_case' # directory of the input image(s)
-config["input_dir"] = 'DeepSegV2Lib' # directory of the input image(s)
-config["preprocess_dir"] = 'BraTS20_sample_case_preprocess' # directory of the pre-processed image(s)
-config["predict_dir"] = 'BraTS20_sample_case_predict' # directory of the predicted segmentation
-config["predict_name"] = 'BraTS20_sample_case_pred.nii.gz' # name of the predicted segmentation
-
-#config["image_path"] = 'BraTS20_sample_case'
-#config["image_path_preprocess"] = 'BraTS20_sample_case_preprocess'
-#config['image_path_predict'] = os.path.join('BraTS20_sample_case_predict','BraTS20_sample_case_pred.nii.gz')
-
-# define used MRI modalities 
-config["all_modalities"] = ["t1", "t1ce", "flair", "t2"]
-config["image_modalities"] = config["all_modalities"]
-# one variable for each MRI modality
-config["image_1"] = 'BraTS20_sample_case_flair.nii.gz'
-config["image_2"] = 'BraTS20_sample_case_t1.nii.gz'
-config["image_3"] = 'BraTS20_sample_case_t1ce.nii.gz'
-config["image_4"] = 'BraTS20_sample_case_t2.nii.gz'
+#config["image_shape"] = (192, 224, 160) # the input to the pre-trained model
+config["image_shape"] = (160, 224, 192) # the input to the pre-trained model
 
 # OR one variable for all MRI modalities
 config["images"] = ['BraTS20_sample_case_flair.nii.gz', 'BraTS20_sample_case_t1.nii.gz', 
@@ -109,72 +96,6 @@ See more information in <a href="https://github.com/organization/projectname#Dee
 This file was originally developed by Jean-Christophe Fillion-Robin, Kitware Inc., Andras Lasso, PerkLab,
 and Steve Pieper, Isomics, Inc. and was partially funded by NIH grant 3P41RR013218-12S1.
 """
-
-    # Additional initialization step after application startup is complete
-    slicer.app.connect("startupCompleted()", registerSampleData)
-
-#
-# Register sample data sets in Sample Data module
-#
-
-def registerSampleData():
-  """
-  Add data sets to Sample Data module.
-  """
-  import SampleData
-  iconsPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons')
-
-  # DeepSegV21
-  SampleData.SampleDataLogic.registerCustomSampleDataSource(
-    category='DeepSegV2',
-    sampleName='DeepSegV2Model',
-    # Thumbnail should have size of approximately 260x280 pixels and stored in Resources/Icons folder.
-    # It can be created by Screen Capture module, "Capture all views" option enabled, "Number of images" set to "Single".
-    thumbnailFileName=os.path.join(iconsPath, 'DeepSegV21.png'),
-    uris="https://github.com/razeineldin/Test_Data/raw/main/model-238.h5",
-    fileNames='DeepSegV2Model.h5',
-    # Checksum to ensure file integrity. Can be computed by this command:
-    #  import hashlib; print(hashlib.sha256(open(filename, "rb").read()).hexdigest())
-    checksums = 'SHA256:b12111e871aa04436f2e19e79d24a77c39c22d301d651be842cd711d1ac391b8',
-    nodeNames='DeepSegV2Model'
-  )
-  # DeepSegV22
-  SampleData.SampleDataLogic.registerCustomSampleDataSource(
-    category='DeepSegV2',
-    sampleName='DeepSegV2Flair',
-    thumbnailFileName=os.path.join(iconsPath, 'DeepSegV2Flair.png'),
-    uris="https://github.com/razeineldin/Test_Data/raw/main/sample_case_flair.nii.gz",
-    fileNames='DeepSegV2Flair.nii.gz',
-    checksums = 'SHA256:ed7f08979b1a1e8208f39ae9ac0b968ce7ee9c61464ddbbe5f7c77713ff06485',
-    nodeNames='DeepSegV2Flair'
-  )
-  SampleData.SampleDataLogic.registerCustomSampleDataSource(
-    category='DeepSegV2',
-    sampleName='DeepSegV2 MRI T1',
-    thumbnailFileName=os.path.join(iconsPath, 'DeepSegV2T1.png'),
-    uris="https://github.com/razeineldin/Test_Data/raw/main/sample_case_t1.nii.gz",
-    fileNames='DeepSegV2T1.nii.gz',
-    checksums = 'SHA256:ed7f08979b1a1e8208f39ae9ac0b968ce7ee9c61464ddbbe5f7c77713ff06485',
-    nodeNames='DeepSegV2T1'
-  )
-  SampleData.SampleDataLogic.registerCustomSampleDataSource(
-    category='DeepSegV2',
-    sampleName='DeepSegV2 MRI T1ce',
-    thumbnailFileName=os.path.join(iconsPath, 'DeepSegV2T1ce.png'),
-    uris="https://github.com/razeineldin/Test_Data/raw/main/sample_case_t1ce.nii.gz",
-    fileNames='DeepSegV2T1ce.nii.gz',
-    checksums = 'SHA256:ed7f08979b1a1e8208f39ae9ac0b968ce7ee9c61464ddbbe5f7c77713ff06485',
-    nodeNames='DeepSegV2T1ce'
-  )
-  SampleData.SampleDataLogic.registerCustomSampleDataSource(
-    category='DeepSegV2',
-    sampleName='DeepSegV2 MRI T2',
-    thumbnailFileName=os.path.join(iconsPath, 'DeepSegV2T2.png'),
-    uris="https://github.com/razeineldin/Test_Data/raw/main/sample_case_t2.nii.gz",
-    fileNames='DeepSegV2T2.nii.gz',
-    checksums = 'SHA256:ed7f08979b1a1e8208f39ae9ac0b968ce7ee9c61464ddbbe5f7c77713ff06485',
-    nodeNames='DeepSegV2T2'
-  )
 
 #
 # DeepSegV2Widget
@@ -328,7 +249,7 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.ui.outputSelector.setCurrentNode(self._parameterNode.GetNodeReference("OutputVolume"))
 
     # Update buttons states and tooltips
-    if self._parameterNode.GetNodeReference("InputVolume1") and self._parameterNode.GetNodeReference("OutputVolume"):
+    if self._parameterNode.GetNodeReference("InputVolume1"): # and self._parameterNode.GetNodeReference("OutputVolume"):
       self.ui.applyButton.toolTip = "Compute output segmentation"
       self.ui.applyButton.enabled = True
     else:
@@ -371,20 +292,19 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       logging.info('Processing started')
 
 
-      import SampleData
-      registerSampleData()
-      inputVolume = SampleData.downloadSample('DeepSegV2Flair')
-      #inputScalarRange = inputVolume.GetImageData().GetScalarRange()
+      #import SampleData
+      #inputVolume = SampleData.downloadSample('IGSSampleDataFlair')
+      inputVolume = self.ui.FLAIRSelector.currentNode()
+
+      volumesLogic = slicer.modules.volumes.logic()
 
       img_norm = self.logic.norm_image(inputVolume) #self.ui.FLAIRSelector.currentNode())
       slicer.util.updateVolumeFromArray(self.ui.outputSelector.currentNode(), img_norm)
 
       #self.logic.preprocess_images(input_dir=config['input_dir'], preprocess_dir=config['preprocess_dir'], images=config["images"], dim=config["image_shape"])
 
-
       #self.logic.process(self.ui.FLAIRSelector.currentNode(), self.ui.outputSelector.currentNode(),
       #  self.ui.imageThresholdSliderWidget.value, self.ui.invertOutputCheckBox.checked)
-
 
       stopTime = time.time()
       logging.info('Processing completed in {0:.2f} seconds'.format(stopTime-startTime))
@@ -468,32 +388,6 @@ class DeepSegV2Logic(ScriptedLoadableModuleLogic):
             os.makedirs(preprocess_dir)
         nib.save(img_preprocess_nifti, os.path.join(preprocess_dir, img))
 
-
-"""
-  def process(self, inputVolume, outputVolume, imageThreshold, showResult=True):
-
-    if not inputVolume or not outputVolume:
-      raise ValueError("Input or output volume is invalid")
-
-    import time
-    startTime = time.time()
-    logging.info('Processing started')
-
-    # Compute the thresholded output volume using the "Threshold Scalar Volume" CLI module
-    cliParams = {
-      'InputVolume': inputVolume.GetID(),
-      'OutputVolume': outputVolume.GetID(),
-      'ThresholdValue' : imageThreshold,
-      'ThresholdType' : 'Above' if invert else 'Below'
-      }
-    cliNode = slicer.cli.run(slicer.modules.thresholdscalarvolume, None, cliParams, wait_for_completion=True, update_display=showResult)
-    # We don't need the CLI module node anymore, remove it to not clutter the scene with it
-    slicer.mrmlScene.RemoveNode(cliNode)
-
-    stopTime = time.time()
-    logging.info('Processing completed in {0:.2f} seconds'.format(stopTime-startTime))
-"""
-
 #
 # DeepSegV2Test
 #
@@ -533,8 +427,7 @@ class DeepSegV2Test(ScriptedLoadableModuleTest):
     # Get/create input data
 
     import SampleData
-    registerSampleData()
-    inputVolume = SampleData.downloadSample('DeepSegV2Flair')
+    inputVolume = SampleData.downloadSample('IGSSampleDataFlair')
     self.delayDisplay('Loaded test data set')
 
     inputScalarRange = inputVolume.GetImageData().GetScalarRange()

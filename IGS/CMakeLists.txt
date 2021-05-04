@@ -35,6 +35,7 @@ endif()
 
 #-----------------------------------------------------------------------------
 # Extension modules
+add_subdirectory(IGSSampleData)
 add_subdirectory(DeepSegV2)
 ## NEXT_MODULE
 
