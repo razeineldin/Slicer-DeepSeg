@@ -3,7 +3,7 @@ import unittest
 import logging
 import vtk, qt, ctk, slicer
 
-# DeepSegV2 imports
+####################### add your imports here #######################
 """
 try:
   import matplotlib.pyplot as plt
@@ -48,12 +48,13 @@ import tensorflow as tf
 # utlity functions imports
 import matplotlib.pyplot as plt
 from nilearn.image import crop_img as crop_image
-
+#####################################################################
 
 from slicer.ScriptedLoadableModule import *
 from slicer.util import VTKObservationMixin
 
 
+####################### add your variables here #######################
 config = dict()
 
 # define input
@@ -71,6 +72,8 @@ config["input_shape"] = (config["image_shape"][0], config["image_shape"][1],
 config['model_path'] = os.path.join('weights', 'model-238.h5')
 config['tumor_type'] = "all" # "all", "whole", "core", "enhancing"
 
+#######################################################################
+
 #
 # DeepSegV2
 #
@@ -85,7 +88,7 @@ class DeepSegV2(ScriptedLoadableModule):
     self.parent.title = "DeepSegV2"  # TODO: make this more human readable by adding spaces
     self.parent.categories=["Examples"]
     self.parent.dependencies = []  # TODO: add here list of module names that this module requires
-    self.parent.contributors=["Ramy Zeineldin"]
+    self.parent.contributors=["Ramy Zeineldin (Reutlingen University)"]
     # TODO: update with short description of the module and a link to online module documentation
     self.parent.helpText = """
 This is an example of scripted loadable module bundled in an extension.
@@ -143,6 +146,7 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.addObserver(slicer.mrmlScene, slicer.mrmlScene.StartCloseEvent, self.onSceneStartClose)
     self.addObserver(slicer.mrmlScene, slicer.mrmlScene.EndCloseEvent, self.onSceneEndClose)
 
+    ####################### add your connections here #######################
     # These connections ensure that whenever user changes some settings on the GUI, that is saved in the MRML scene
     # (in the selected parameter node).
     #self.ui.inputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
@@ -154,6 +158,7 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     # Buttons
     self.ui.applyButton.connect('clicked(bool)', self.onApplyButton)
+    #########################################################################
 
     # Make sure parameter node is initialized (needed for module reload)
     self.initializeParameterNode()
@@ -241,6 +246,7 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     # Make sure GUI changes do not call updateParameterNodeFromGUI (it could cause infinite loop)
     self._updatingGUIFromParameterNode = True
 
+    ####################### add your ui connected components here #######################
     # Update node selectors and sliders
     self.ui.FLAIRSelector.setCurrentNode(self._parameterNode.GetNodeReference("InputVolume1"))
     self.ui.T1Selector.setCurrentNode(self._parameterNode.GetNodeReference("InputVolume2"))
@@ -255,6 +261,7 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     else:
       self.ui.applyButton.toolTip = "Select input and output volume nodes"
       self.ui.applyButton.enabled = False
+    #####################################################################################
 
     # All the GUI updates are done
     self._updatingGUIFromParameterNode = False
@@ -270,12 +277,14 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     wasModified = self._parameterNode.StartModify()  # Modify all properties in a single batch
 
+    ####################### add your ui connected components here #######################
     #self._parameterNode.SetNodeReferenceID("InputVolume", self.ui.inputSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("InputVolume1", self.ui.FLAIRSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("InputVolume2", self.ui.T1Selector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("InputVolume3", self.ui.T1ceSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("InputVolume4", self.ui.T2Selector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("OutputVolume", self.ui.outputSelector.currentNodeID)
+    #####################################################################################
 
     self._parameterNode.EndModify(wasModified)
 
@@ -285,6 +294,7 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     """
 
     try:
+      ####################### add your main code here #######################
       # Compute output
       #print("Hello DeepSegV2")
       import time
@@ -299,6 +309,8 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
       # preprocess image(s)
       img_norm = self.logic.norm_image(img_norm)
+      # TODO: preprocess images, tumor prediction
+
       slicer.util.updateVolumeFromArray(segVolumeNode, img_norm)
 
       # fix the orientation problem
@@ -320,6 +332,8 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
       stopTime = time.time()
       logging.info('Processing completed in {0:.2f} seconds'.format(stopTime-startTime))
+
+      #######################################################################
 
     except Exception as e:
       slicer.util.errorDisplay("Failed to compute results: "+str(e))
@@ -356,6 +370,7 @@ class DeepSegV2Logic(ScriptedLoadableModuleLogic):
     if not parameterNode.GetParameter("Invert"):
       parameterNode.SetParameter("Invert", "false")
 
+  ####################### add your functions here #######################
   def norm_image(self, img, norm_type = "norm"):
     if norm_type == "standard_norm": # standarization, same dataset
         img_mean = img.mean()
@@ -370,6 +385,29 @@ class DeepSegV2Logic(ScriptedLoadableModuleLogic):
         img = (img - np.min(img))/img_ptp
 
     return img
+
+  def preprocess_image(self, img, dim=config["image_shape"]):
+    for img in images:
+        #print("Preprocessing: ", img)
+
+        # load the MRI imaging modalities (flair, t1, t1ce, t2)
+        img_nifti = nib.load(os.path.join(input_dir, img)) #.get_fdata(dtype='float32')
+
+        # crop the input image
+        img_preprocess = crop_image(img_nifti)
+    
+        # convert into numpy array
+        img_array = np.array(img_preprocess.get_fdata(dtype='float32'))
+
+        # pad the preprocessed image
+        padded_image = np.zeros((dim[0],dim[1],dim[2]))
+        padded_image[:img_array.shape[0],:img_array.shape[1],:img_array.shape[2]] = img_array
+        
+        # save nifti images
+        img_preprocess_nifti = nib.Nifti1Image(self.norm_image(padded_image), img_nifti.affine, img_nifti.header) 
+        if not os.path.exists(preprocess_dir):
+            os.makedirs(preprocess_dir)
+        nib.save(img_preprocess_nifti, os.path.join(preprocess_dir, img))
 
   def preprocess_images(self, input_dir, preprocess_dir, images, dim=config["image_shape"]):
     for img in images:
@@ -393,6 +431,7 @@ class DeepSegV2Logic(ScriptedLoadableModuleLogic):
         if not os.path.exists(preprocess_dir):
             os.makedirs(preprocess_dir)
         nib.save(img_preprocess_nifti, os.path.join(preprocess_dir, img))
+  #######################################################################
 
 #
 # DeepSegV2Test
