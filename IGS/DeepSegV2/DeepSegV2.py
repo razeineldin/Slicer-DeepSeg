@@ -2,10 +2,87 @@ import os
 import unittest
 import logging
 import vtk, qt, ctk, slicer
+
+# DeepSegV2 imports
+try:
+  import matplotlib.pyplot as plt
+except:
+  slicer.util.pip_install('matplotlib')
+  import matplotlib.pyplot as plt
+# TODO: add other imports
+try:
+  import numpy as np
+except:
+  slicer.util.pip_install('numpy~=1.19.2')
+  import numpy as np
+try:
+  import nibabel as nib
+except:
+  slicer.util.pip_install('nibabel')
+  import nibabel as nib
+try:
+  from nilearn.image import crop_img as crop_image
+except:
+  slicer.util.pip_install('nilearn')
+  from nilearn.image import crop_img as crop_image
+
+import sys
+sys.argv = ['pdm']
+import tensorflow.python
+
+try:
+  import tensorflow as tf
+except:
+  slicer.util.pip_install('tensorflow')
+  import tensorflow as tf
+
+
+#import numpy as np
+#import nibabel as nib
+#import tensorflow as tf
+
+# utlity functions imports
+#import matplotlib.pyplot as plt
+#from nilearn.image import crop_img as crop_image
+
+
 from slicer.ScriptedLoadableModule import *
 from slicer.util import VTKObservationMixin
 
-# DeepSegV2 imports
+
+config = dict()
+
+# define input
+config["image_shape"] = (192, 224, 160) # the input to the pre-trained model
+
+config["input_dir"] = 'BraTS20_sample_case' # directory of the input image(s)
+config["preprocess_dir"] = 'BraTS20_sample_case_preprocess' # directory of the pre-processed image(s)
+config["predict_dir"] = 'BraTS20_sample_case_predict' # directory of the predicted segmentation
+config["predict_name"] = 'BraTS20_sample_case_pred.nii.gz' # name of the predicted segmentation
+
+#config["image_path"] = 'BraTS20_sample_case'
+#config["image_path_preprocess"] = 'BraTS20_sample_case_preprocess'
+#config['image_path_predict'] = os.path.join('BraTS20_sample_case_predict','BraTS20_sample_case_pred.nii.gz')
+
+# define used MRI modalities 
+config["all_modalities"] = ["t1", "t1ce", "flair", "t2"]
+config["image_modalities"] = config["all_modalities"]
+# one variable for each MRI modality
+config["image_1"] = 'BraTS20_sample_case_flair.nii.gz'
+config["image_2"] = 'BraTS20_sample_case_t1.nii.gz'
+config["image_3"] = 'BraTS20_sample_case_t1ce.nii.gz'
+config["image_4"] = 'BraTS20_sample_case_t2.nii.gz'
+
+# OR one variable for all MRI modalities
+config["images"] = ['BraTS20_sample_case_flair.nii.gz', 'BraTS20_sample_case_t1.nii.gz', 
+                     'BraTS20_sample_case_t1ce.nii.gz', 'BraTS20_sample_case_t2.nii.gz']
+
+# model parameters
+config["input_shape"] = (config["image_shape"][0], config["image_shape"][1], 
+                         config["image_shape"][2], len(config["images"]))
+
+config['model_path'] = os.path.join('weights', 'model-238.h5')
+config['tumor_type'] = "all" # "all", "whole", "core", "enhancing"
 
 #
 # DeepSegV2
@@ -273,8 +350,14 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     """
     try:
 
-      self.logic.process(self.ui.FLAIRSelector.currentNode(), self.ui.outputSelector.currentNode(),
-        self.ui.imageThresholdSliderWidget.value, self.ui.invertOutputCheckBox.checked)
+      # Compute output
+      #print("Hello DeepSegV2")
+      self.logic.norm_image(self.ui.FLAIRSelector.currentNode(), self.ui.outputSelector.currentNode())
+      #self.logic.preprocess_images(input_dir=config['input_dir'], preprocess_dir=config['preprocess_dir'], images=config["images"], dim=config["image_shape"])
+
+
+      #self.logic.process(self.ui.FLAIRSelector.currentNode(), self.ui.outputSelector.currentNode(),
+      #  self.ui.imageThresholdSliderWidget.value, self.ui.invertOutputCheckBox.checked)
 
     except Exception as e:
       slicer.util.errorDisplay("Failed to compute results: "+str(e))
@@ -311,16 +394,76 @@ class DeepSegV2Logic(ScriptedLoadableModuleLogic):
     if not parameterNode.GetParameter("Invert"):
       parameterNode.SetParameter("Invert", "false")
 
+  """def norm_image(self, img, norm_type = "norm"):
+    if norm_type == "standard_norm": # standarization, same dataset
+        img_mean = img.mean()
+        img_std = img.std()
+        img_std = 1 if img.std()==0 else img.std()
+        img = (img - img_mean) / img_std
+    elif norm_type == "norm": # different datasets
+        img = (img - np.min(img))/(np.ptp(img)) # (np.max(img) - np.min(img))
+    elif norm_type == "norm_slow": # different datasets
+#         img = (img - np.min(img))/(np.max(img) - np.min(img))
+        img_ptp = 1 if np.ptp(img)== 0 else np.ptp(img) 
+        img = (img - np.min(img))/img_ptp
+    return img"""
+
+  def norm_image(self, inputVolume, outputVolume, norm_type = "norm"):
+    if not inputVolume or not outputVolume:
+      raise ValueError("Input or output volume is invalid")
+
+    import time
+    startTime = time.time()
+    logging.info('Processing started')
+
+    # Compute the thresholded output volume using the "Threshold Scalar Volume" CLI module
+    #img = slicer.util.addVolumeFromArray(inputVolume)
+    img = slicer.util.arrayFromVolume(inputVolume)
+
+    if norm_type == "standard_norm": # standarization, same dataset
+        img_mean = img.mean()
+        img_std = img.std()
+        img_std = 1 if img.std()==0 else img.std()
+        img = (img - img_mean) / img_std
+    elif norm_type == "norm": # different datasets
+        img = (img - np.min(img))/(np.ptp(img)) # (np.max(img) - np.min(img))
+    elif norm_type == "norm_slow": # different datasets
+#         img = (img - np.min(img))/(np.max(img) - np.min(img))
+        img_ptp = 1 if np.ptp(img)== 0 else np.ptp(img) 
+        img = (img - np.min(img))/img_ptp
+    slicer.util.updateVolumeFromArray(outputVolume, img)
+    #outputVolume = img
+
+    stopTime = time.time()
+    logging.info('Processing completed in {0:.2f} seconds'.format(stopTime-startTime))
+
+
+  def preprocess_images(self, input_dir, preprocess_dir, images, dim=config["image_shape"]):
+    for img in images:
+        #print("Preprocessing: ", img)
+
+        # load the MRI imaging modalities (flair, t1, t1ce, t2)
+        img_nifti = nib.load(os.path.join(input_dir, img)) #.get_fdata(dtype='float32')
+
+        # crop the input image
+        img_preprocess = crop_image(img_nifti)
+    
+        # convert into numpy array
+        img_array = np.array(img_preprocess.get_fdata(dtype='float32'))
+
+        # pad the preprocessed image
+        padded_image = np.zeros((dim[0],dim[1],dim[2]))
+        padded_image[:img_array.shape[0],:img_array.shape[1],:img_array.shape[2]] = img_array
+        
+        # save nifti images
+        img_preprocess_nifti = nib.Nifti1Image(self.norm_image(padded_image), img_nifti.affine, img_nifti.header) 
+        if not os.path.exists(preprocess_dir):
+            os.makedirs(preprocess_dir)
+        nib.save(img_preprocess_nifti, os.path.join(preprocess_dir, img))
+
+
+"""
   def process(self, inputVolume, outputVolume, imageThreshold, showResult=True):
-    """
-    Run the processing algorithm.
-    Can be used without GUI widget.
-    :param inputVolume: volume to be thresholded
-    :param outputVolume: thresholding result
-    :param imageThreshold: values above/below this threshold will be set to 0
-    :param invert: if True then values above the threshold will be set to 0, otherwise values below are set to 0
-    :param showResult: show output volume in slice viewers
-    """
 
     if not inputVolume or not outputVolume:
       raise ValueError("Input or output volume is invalid")
@@ -342,6 +485,7 @@ class DeepSegV2Logic(ScriptedLoadableModuleLogic):
 
     stopTime = time.time()
     logging.info('Processing completed in {0:.2f} seconds'.format(stopTime-startTime))
+"""
 
 #
 # DeepSegV2Test

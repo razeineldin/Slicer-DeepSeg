@@ -5,8 +5,8 @@ tensorflow_addons
 glob2
 matplotlib
 nibabel
-numpy~=1.19.2
-h5py~=2.10.0
+#numpy~=1.19.2
+#h5py~=2.10.0
 pandas
 scipy
 sklearn
