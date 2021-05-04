@@ -291,17 +291,29 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       startTime = time.time()
       logging.info('Processing started')
 
-
-      #import SampleData
-      #inputVolume = SampleData.downloadSample('IGSSampleDataFlair')
       inputVolume = self.ui.FLAIRSelector.currentNode()
+      segVolumeNode = self.ui.outputSelector.currentNode()
 
-      volumesLogic = slicer.modules.volumes.logic()
+      # get the numpy array(s)
+      img_norm = slicer.util.arrayFromVolume(inputVolume)
 
-      img_norm = self.logic.norm_image(inputVolume) #self.ui.FLAIRSelector.currentNode())
-      slicer.util.updateVolumeFromArray(self.ui.outputSelector.currentNode(), img_norm)
+      # preprocess image(s)
+      img_norm = self.logic.norm_image(img_norm)
+      slicer.util.updateVolumeFromArray(segVolumeNode, img_norm)
+
+      # fix the orientation problem
+      segVolumeNode.SetOrigin(inputVolume.GetOrigin())
+      segVolumeNode.SetSpacing(inputVolume.GetSpacing())
+      ijkToRasDirections = vtk.vtkMatrix4x4()
+      inputVolume.GetIJKToRASDirectionMatrix(ijkToRasDirections)
+      segVolumeNode.SetIJKToRASDirectionMatrix(ijkToRasDirections)
+      slicer.util.setSliceViewerLayers(background=segVolumeNode)
+
+      #img_norm = self.logic.norm_image(inputVolume) #self.ui.FLAIRSelector.currentNode())
+      #slicer.util.updateVolumeFromArray(self.ui.outputSelector.currentNode(), img_norm)
 
       #self.logic.preprocess_images(input_dir=config['input_dir'], preprocess_dir=config['preprocess_dir'], images=config["images"], dim=config["image_shape"])
+
 
       #self.logic.process(self.ui.FLAIRSelector.currentNode(), self.ui.outputSelector.currentNode(),
       #  self.ui.imageThresholdSliderWidget.value, self.ui.invertOutputCheckBox.checked)
@@ -344,13 +356,7 @@ class DeepSegV2Logic(ScriptedLoadableModuleLogic):
     if not parameterNode.GetParameter("Invert"):
       parameterNode.SetParameter("Invert", "false")
 
-  def norm_image(self, inputVolume, norm_type = "norm"):
-    if not inputVolume: # or not outputVolume:
-      raise ValueError("Input volume is invalid")
-
-    # Compute the thresholded output volume using the "Threshold Scalar Volume" CLI module
-    img = slicer.util.arrayFromVolume(inputVolume)
-
+  def norm_image(self, img, norm_type = "norm"):
     if norm_type == "standard_norm": # standarization, same dataset
         img_mean = img.mean()
         img_std = img.std()

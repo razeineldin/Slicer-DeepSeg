@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>279</width>
-    <height>286</height>
+    <width>282</width>
+    <height>335</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -168,12 +168,18 @@
          <bool>false</bool>
         </property>
         <property name="noneEnabled">
-         <bool>true</bool>
+         <bool>false</bool>
         </property>
         <property name="addEnabled">
          <bool>true</bool>
         </property>
         <property name="removeEnabled">
+         <bool>false</bool>
+        </property>
+        <property name="editEnabled">
+         <bool>false</bool>
+        </property>
+        <property name="renameEnabled">
          <bool>true</bool>
         </property>
        </widget>
@@ -244,11 +250,6 @@
    <extends>QWidget</extends>
    <header>ctkCollapsibleButton.h</header>
    <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>ctkSliderWidget</class>
-   <extends>QWidget</extends>
-   <header>ctkSliderWidget.h</header>
   </customwidget>
   <customwidget>
    <class>qMRMLNodeComboBox</class>
