@@ -36,7 +36,6 @@ except:
   slicer.util.pip_install('tensorflow')
   import tensorflow as tf
 
-
 #import numpy as np
 #import nibabel as nib
 #import tensorflow as tf
@@ -55,7 +54,8 @@ config = dict()
 # define input
 config["image_shape"] = (192, 224, 160) # the input to the pre-trained model
 
-config["input_dir"] = 'BraTS20_sample_case' # directory of the input image(s)
+#config["input_dir"] = 'BraTS20_sample_case' # directory of the input image(s)
+config["input_dir"] = 'DeepSegV2Lib' # directory of the input image(s)
 config["preprocess_dir"] = 'BraTS20_sample_case_preprocess' # directory of the pre-processed image(s)
 config["predict_dir"] = 'BraTS20_sample_case_predict' # directory of the predicted segmentation
 config["predict_name"] = 'BraTS20_sample_case_pred.nii.gz' # name of the predicted segmentation
@@ -121,45 +121,59 @@ def registerSampleData():
   """
   Add data sets to Sample Data module.
   """
-  # It is always recommended to provide sample data for users to make it easy to try the module,
-  # but if no sample data is available then this method (and associated startupCompeted signal connection) can be removed.
-
   import SampleData
   iconsPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons')
 
-  # To ensure that the source code repository remains small (can be downloaded and installed quickly)
-  # it is recommended to store data sets that are larger than a few MB in a Github release.
-
   # DeepSegV21
   SampleData.SampleDataLogic.registerCustomSampleDataSource(
-    # Category and sample name displayed in Sample Data module
     category='DeepSegV2',
-    sampleName='DeepSegV21',
+    sampleName='DeepSegV2Model',
     # Thumbnail should have size of approximately 260x280 pixels and stored in Resources/Icons folder.
     # It can be created by Screen Capture module, "Capture all views" option enabled, "Number of images" set to "Single".
     thumbnailFileName=os.path.join(iconsPath, 'DeepSegV21.png'),
-    # Download URL and target file name
-    uris="https://github.com/Slicer/SlicerTestingData/releases/download/SHA256/998cb522173839c78657f4bc0ea907cea09fd04e44601f17c82ea27927937b95",
-    fileNames='DeepSegV21.nrrd',
+    uris="https://github.com/razeineldin/Test_Data/raw/main/model-238.h5",
+    fileNames='DeepSegV2Model.h5',
     # Checksum to ensure file integrity. Can be computed by this command:
     #  import hashlib; print(hashlib.sha256(open(filename, "rb").read()).hexdigest())
-    checksums = 'SHA256:998cb522173839c78657f4bc0ea907cea09fd04e44601f17c82ea27927937b95',
-    # This node name will be used when the data set is loaded
-    nodeNames='DeepSegV21'
+    checksums = 'SHA256:b12111e871aa04436f2e19e79d24a77c39c22d301d651be842cd711d1ac391b8',
+    nodeNames='DeepSegV2Model'
   )
-
   # DeepSegV22
   SampleData.SampleDataLogic.registerCustomSampleDataSource(
-    # Category and sample name displayed in Sample Data module
     category='DeepSegV2',
-    sampleName='DeepSegV22',
-    thumbnailFileName=os.path.join(iconsPath, 'DeepSegV22.png'),
-    # Download URL and target file name
-    uris="https://github.com/Slicer/SlicerTestingData/releases/download/SHA256/1a64f3f422eb3d1c9b093d1a18da354b13bcf307907c66317e2463ee530b7a97",
-    fileNames='DeepSegV22.nrrd',
-    checksums = 'SHA256:1a64f3f422eb3d1c9b093d1a18da354b13bcf307907c66317e2463ee530b7a97',
-    # This node name will be used when the data set is loaded
-    nodeNames='DeepSegV22'
+    sampleName='DeepSegV2Flair',
+    thumbnailFileName=os.path.join(iconsPath, 'DeepSegV2Flair.png'),
+    uris="https://github.com/razeineldin/Test_Data/raw/main/sample_case_flair.nii.gz",
+    fileNames='DeepSegV2Flair.nii.gz',
+    checksums = 'SHA256:ed7f08979b1a1e8208f39ae9ac0b968ce7ee9c61464ddbbe5f7c77713ff06485',
+    nodeNames='DeepSegV2Flair'
+  )
+  SampleData.SampleDataLogic.registerCustomSampleDataSource(
+    category='DeepSegV2',
+    sampleName='DeepSegV2 MRI T1',
+    thumbnailFileName=os.path.join(iconsPath, 'DeepSegV2T1.png'),
+    uris="https://github.com/razeineldin/Test_Data/raw/main/sample_case_t1.nii.gz",
+    fileNames='DeepSegV2T1.nii.gz',
+    checksums = 'SHA256:ed7f08979b1a1e8208f39ae9ac0b968ce7ee9c61464ddbbe5f7c77713ff06485',
+    nodeNames='DeepSegV2T1'
+  )
+  SampleData.SampleDataLogic.registerCustomSampleDataSource(
+    category='DeepSegV2',
+    sampleName='DeepSegV2 MRI T1ce',
+    thumbnailFileName=os.path.join(iconsPath, 'DeepSegV2T1ce.png'),
+    uris="https://github.com/razeineldin/Test_Data/raw/main/sample_case_t1ce.nii.gz",
+    fileNames='DeepSegV2T1ce.nii.gz',
+    checksums = 'SHA256:ed7f08979b1a1e8208f39ae9ac0b968ce7ee9c61464ddbbe5f7c77713ff06485',
+    nodeNames='DeepSegV2T1ce'
+  )
+  SampleData.SampleDataLogic.registerCustomSampleDataSource(
+    category='DeepSegV2',
+    sampleName='DeepSegV2 MRI T2',
+    thumbnailFileName=os.path.join(iconsPath, 'DeepSegV2T2.png'),
+    uris="https://github.com/razeineldin/Test_Data/raw/main/sample_case_t2.nii.gz",
+    fileNames='DeepSegV2T2.nii.gz',
+    checksums = 'SHA256:ed7f08979b1a1e8208f39ae9ac0b968ce7ee9c61464ddbbe5f7c77713ff06485',
+    nodeNames='DeepSegV2T2'
   )
 
 #
@@ -356,11 +370,15 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       startTime = time.time()
       logging.info('Processing started')
 
-      #slicer.util.updateVolumeFromArray(outputVolume, img)
 
-      img_norm = self.logic.norm_image(self.ui.FLAIRSelector.currentNode())
+      import SampleData
+      registerSampleData()
+      inputVolume = SampleData.downloadSample('DeepSegV2Flair')
+      #inputScalarRange = inputVolume.GetImageData().GetScalarRange()
+
+      img_norm = self.logic.norm_image(inputVolume) #self.ui.FLAIRSelector.currentNode())
       slicer.util.updateVolumeFromArray(self.ui.outputSelector.currentNode(), img_norm)
-      #self.logic.norm_image(self.ui.FLAIRSelector.currentNode(), self.ui.outputSelector.currentNode())
+
       #self.logic.preprocess_images(input_dir=config['input_dir'], preprocess_dir=config['preprocess_dir'], images=config["images"], dim=config["image_shape"])
 
 
@@ -406,26 +424,11 @@ class DeepSegV2Logic(ScriptedLoadableModuleLogic):
     if not parameterNode.GetParameter("Invert"):
       parameterNode.SetParameter("Invert", "false")
 
-  """def norm_image(self, img, norm_type = "norm"):
-    if norm_type == "standard_norm": # standarization, same dataset
-        img_mean = img.mean()
-        img_std = img.std()
-        img_std = 1 if img.std()==0 else img.std()
-        img = (img - img_mean) / img_std
-    elif norm_type == "norm": # different datasets
-        img = (img - np.min(img))/(np.ptp(img)) # (np.max(img) - np.min(img))
-    elif norm_type == "norm_slow": # different datasets
-#         img = (img - np.min(img))/(np.max(img) - np.min(img))
-        img_ptp = 1 if np.ptp(img)== 0 else np.ptp(img) 
-        img = (img - np.min(img))/img_ptp
-    return img"""
-
   def norm_image(self, inputVolume, norm_type = "norm"):
     if not inputVolume: # or not outputVolume:
       raise ValueError("Input volume is invalid")
 
     # Compute the thresholded output volume using the "Threshold Scalar Volume" CLI module
-    #img = slicer.util.addVolumeFromArray(inputVolume)
     img = slicer.util.arrayFromVolume(inputVolume)
 
     if norm_type == "standard_norm": # standarization, same dataset
@@ -531,7 +534,7 @@ class DeepSegV2Test(ScriptedLoadableModuleTest):
 
     import SampleData
     registerSampleData()
-    inputVolume = SampleData.downloadSample('DeepSegV21')
+    inputVolume = SampleData.downloadSample('DeepSegV2Flair')
     self.delayDisplay('Loaded test data set')
 
     inputScalarRange = inputVolume.GetImageData().GetScalarRange()
