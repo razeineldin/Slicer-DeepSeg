@@ -296,7 +296,6 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     try:
       ####################### add your main code here #######################
       # Compute output
-      #print("Hello DeepSegV2")
       import time
       startTime = time.time()
       logging.info('Processing started')
@@ -308,14 +307,11 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       img = slicer.util.arrayFromVolume(inputVolume)
       print("img:", img.shape)
       # preprocess image(s)
-      img_crop = self.logic.crop_image(img)
-      img_norm = self.logic.norm_image(img_crop)
-      print("img_crop:", img_crop.shape)
-      print("img_norm:", img_norm.shape)
-      # TODO: preprocess images, tumor prediction
+      img_preprocess = self.logic.preprocess_image(img)
+      print("img_preprocess:", img_preprocess.shape)
+      # TODO: tumor prediction
 
-
-      slicer.util.updateVolumeFromArray(segVolumeNode, img_norm)
+      slicer.util.updateVolumeFromArray(segVolumeNode, img_preprocess)
 
       # fix the orientation problem
       segVolumeNode.SetOrigin(inputVolume.GetOrigin())
@@ -399,7 +395,10 @@ class DeepSegV2Logic(ScriptedLoadableModuleLogic):
 
   def preprocess_image(self, img, dim=config["image_shape"]):
     # TODO: automatic cropping using img[~np.all(img == 0, axis=1)]
-    return img
+    img_crop = self.crop_image(img)
+    img_norm = self.norm_image(img_crop)
+
+    return img_norm
 
   #######################################################################
 
