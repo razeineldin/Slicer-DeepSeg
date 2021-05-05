@@ -47,7 +47,7 @@ import tensorflow as tf
 
 # utlity functions imports
 import matplotlib.pyplot as plt
-from nilearn.image import crop_img as crop_image
+#from nilearn.image import crop_img as crop_image
 #####################################################################
 
 from slicer.ScriptedLoadableModule import *
@@ -305,11 +305,15 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       segVolumeNode = self.ui.outputSelector.currentNode()
 
       # get the numpy array(s)
-      img_norm = slicer.util.arrayFromVolume(inputVolume)
-
+      img = slicer.util.arrayFromVolume(inputVolume)
+      print("img:", img.shape)
       # preprocess image(s)
-      img_norm = self.logic.norm_image(img_norm)
+      img_crop = self.logic.crop_image(img)
+      img_norm = self.logic.norm_image(img_crop)
+      print("img_crop:", img_crop.shape)
+      print("img_norm:", img_norm.shape)
       # TODO: preprocess images, tumor prediction
+
 
       slicer.util.updateVolumeFromArray(segVolumeNode, img_norm)
 
@@ -320,15 +324,6 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       inputVolume.GetIJKToRASDirectionMatrix(ijkToRasDirections)
       segVolumeNode.SetIJKToRASDirectionMatrix(ijkToRasDirections)
       slicer.util.setSliceViewerLayers(background=segVolumeNode)
-
-      #img_norm = self.logic.norm_image(inputVolume) #self.ui.FLAIRSelector.currentNode())
-      #slicer.util.updateVolumeFromArray(self.ui.outputSelector.currentNode(), img_norm)
-
-      #self.logic.preprocess_images(input_dir=config['input_dir'], preprocess_dir=config['preprocess_dir'], images=config["images"], dim=config["image_shape"])
-
-
-      #self.logic.process(self.ui.FLAIRSelector.currentNode(), self.ui.outputSelector.currentNode(),
-      #  self.ui.imageThresholdSliderWidget.value, self.ui.invertOutputCheckBox.checked)
 
       stopTime = time.time()
       logging.info('Processing completed in {0:.2f} seconds'.format(stopTime-startTime))
@@ -386,51 +381,26 @@ class DeepSegV2Logic(ScriptedLoadableModuleLogic):
 
     return img
 
+  def crop_image(self, img, new_shape=np.array(config["image_shape"])):
+    # manual cropping to config["image_shape"] = (160, 224, 192)
+    input_shape = np.array(img.shape)
+    # center the cropped image
+    offset = np.array((input_shape - new_shape)/2).astype(np.int)
+    offset[offset<0] = 0
+    x, y, z = offset
+    crop_img = img[x:x+new_shape[0], y:y+new_shape[1], z:z+new_shape[2]]
+
+    # pad the preprocessed image
+    padded_img = np.zeros(new_shape)
+    x, y, z = np.array((new_shape - np.array(crop_img.shape))/2).astype(np.int)
+    padded_img[x:x+crop_img.shape[0],y:y+crop_img.shape[1],z:z+crop_img.shape[2]] = crop_img
+
+    return padded_img
+
   def preprocess_image(self, img, dim=config["image_shape"]):
-    for img in images:
-        #print("Preprocessing: ", img)
+    # TODO: automatic cropping using img[~np.all(img == 0, axis=1)]
+    return img
 
-        # load the MRI imaging modalities (flair, t1, t1ce, t2)
-        img_nifti = nib.load(os.path.join(input_dir, img)) #.get_fdata(dtype='float32')
-
-        # crop the input image
-        img_preprocess = crop_image(img_nifti)
-    
-        # convert into numpy array
-        img_array = np.array(img_preprocess.get_fdata(dtype='float32'))
-
-        # pad the preprocessed image
-        padded_image = np.zeros((dim[0],dim[1],dim[2]))
-        padded_image[:img_array.shape[0],:img_array.shape[1],:img_array.shape[2]] = img_array
-        
-        # save nifti images
-        img_preprocess_nifti = nib.Nifti1Image(self.norm_image(padded_image), img_nifti.affine, img_nifti.header) 
-        if not os.path.exists(preprocess_dir):
-            os.makedirs(preprocess_dir)
-        nib.save(img_preprocess_nifti, os.path.join(preprocess_dir, img))
-
-  def preprocess_images(self, input_dir, preprocess_dir, images, dim=config["image_shape"]):
-    for img in images:
-        #print("Preprocessing: ", img)
-
-        # load the MRI imaging modalities (flair, t1, t1ce, t2)
-        img_nifti = nib.load(os.path.join(input_dir, img)) #.get_fdata(dtype='float32')
-
-        # crop the input image
-        img_preprocess = crop_image(img_nifti)
-    
-        # convert into numpy array
-        img_array = np.array(img_preprocess.get_fdata(dtype='float32'))
-
-        # pad the preprocessed image
-        padded_image = np.zeros((dim[0],dim[1],dim[2]))
-        padded_image[:img_array.shape[0],:img_array.shape[1],:img_array.shape[2]] = img_array
-        
-        # save nifti images
-        img_preprocess_nifti = nib.Nifti1Image(self.norm_image(padded_image), img_nifti.affine, img_nifti.header) 
-        if not os.path.exists(preprocess_dir):
-            os.makedirs(preprocess_dir)
-        nib.save(img_preprocess_nifti, os.path.join(preprocess_dir, img))
   #######################################################################
 
 #
