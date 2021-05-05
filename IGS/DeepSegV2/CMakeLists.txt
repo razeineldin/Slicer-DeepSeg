@@ -4,6 +4,9 @@ set(MODULE_NAME DeepSegV2)
 #-----------------------------------------------------------------------------
 set(MODULE_PYTHON_SCRIPTS
   ${MODULE_NAME}.py
+  ${MODULE_NAME}Lib
+  ${MODULE_NAME}Lib/models.py
+  ${MODULE_NAME}Lib/predict.py
   )
 
 set(MODULE_PYTHON_RESOURCES

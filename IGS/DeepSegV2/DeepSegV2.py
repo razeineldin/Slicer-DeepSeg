@@ -48,6 +48,10 @@ import tensorflow as tf
 # utlity functions imports
 import matplotlib.pyplot as plt
 #from nilearn.image import crop_img as crop_image
+
+# import functions from models module
+#from DeepSegV2Lib.models import *
+import DeepSegV2Lib
 #####################################################################
 
 from slicer.ScriptedLoadableModule import *
@@ -69,7 +73,7 @@ config["images"] = ['BraTS20_sample_case_flair.nii.gz', 'BraTS20_sample_case_t1.
 config["input_shape"] = (config["image_shape"][0], config["image_shape"][1], 
                          config["image_shape"][2], len(config["images"]))
 
-config['model_path'] = os.path.join('weights', 'model-238.h5')
+config['model_path'] = os.path.join('DeepSegV2Lib', 'weights', 'model-238.h5')
 config['tumor_type'] = "all" # "all", "whole", "core", "enhancing"
 
 #######################################################################
@@ -255,7 +259,7 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.ui.outputSelector.setCurrentNode(self._parameterNode.GetNodeReference("OutputVolume"))
 
     # Update buttons states and tooltips
-    if self._parameterNode.GetNodeReference("InputVolume1"): # and self._parameterNode.GetNodeReference("OutputVolume"):
+    if self._parameterNode.GetNodeReference("InputVolume1") and self._parameterNode.GetNodeReference("OutputVolume"):
       self.ui.applyButton.toolTip = "Compute output segmentation"
       self.ui.applyButton.enabled = True
     else:
@@ -310,6 +314,19 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       img_preprocess = self.logic.preprocess_image(img)
       print("img_preprocess:", img_preprocess.shape)
       # TODO: tumor prediction
+
+      # create the residual U-Net model
+      trained_model = DeepSegV2Lib.models.get_model(input_shape=config["input_shape"])
+      #trained_model.summary(line_length=120)
+
+      # load the weights of the pre-trained model
+      modelPath = self.ui.ModelPath.currentPath
+      trained_model.load_weights(modelPath)#, by_name=True)
+
+      # predict and save the tumor boundries
+      #predict_segmentation(trained_model, preprocess_dir=config['preprocess_dir'], 
+      #                    predict_dir=config['predict_dir'], images=config["images"])
+
 
       slicer.util.updateVolumeFromArray(segVolumeNode, img_preprocess)
 
