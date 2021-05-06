@@ -39,15 +39,6 @@ and Steve Pieper, Isomics, Inc. and was partially funded by NIH grant 3P41RR0132
 
     SampleData.SampleDataLogic.registerCustomSampleDataSource(
       category='IGSSampleData',
-      sampleName='IGS Trained Model',
-      thumbnailFileName=os.path.join(iconsPath, 'IGSSampleData.png'),
-      uris="https://github.com/razeineldin/Test_Data/raw/main/model-238.h5",
-      fileNames='IGSSampleDataModel.h5',
-      checksums = 'SHA256:b12111e871aa04436f2e19e79d24a77c39c22d301d651be842cd711d1ac391b8',
-      nodeNames='IGSSampleDataModel'
-    )
-    SampleData.SampleDataLogic.registerCustomSampleDataSource(
-      category='IGSSampleData',
       sampleName='IGS MRI FLAIR',
       thumbnailFileName=os.path.join(iconsPath, 'IGSSampleDataFLAIR.png'),
       uris="https://github.com/razeineldin/Test_Data/raw/main/sample_case_flair.nii.gz",

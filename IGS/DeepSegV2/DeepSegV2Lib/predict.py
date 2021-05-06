@@ -31,7 +31,7 @@ def predict_segmentations(model, images):
     img_arrays = np.array(images).astype(np.float)
 
     # predict 3-channel segmentation using the pre-trained model
-    pred_data_3ch = np.squeeze(model.predict(img_arrays[np.newaxis, ...]))
+    pred_data_3ch = np.squeeze(model.predict(img_arrays[np.newaxis, ...], steps=1))
 
     # convert into 1-channel segmentation
     pred_data = pred_data_3ch.argmax(axis=-1)

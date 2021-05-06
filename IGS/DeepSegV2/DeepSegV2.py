@@ -339,14 +339,18 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       # create the residual U-Net model
       trained_model = DeepSegV2Lib.models.get_model(input_shape=config["input_shape"])
 
-      # load the weights of the pre-trained model
-      modelPath = self.ui.ModelPath.currentPath
+      # load weights of the pre-trained model
+      pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model-238.h5"
+      modelPath = get_file(pretrainedURL.split("/")[-1], pretrainedURL,
+                  file_hash="b12111e871aa04436f2e19e79d24a77c39c22d301d651be842cd711d1ac391b8",
+                  hash_algorithm="sha256")
       trained_model.load_weights(modelPath)#, by_name=True)
 
-      # predict and save the tumor boundries
+      # predict the tumor boundries
       tumor_pred = DeepSegV2Lib.predict.predict_segmentations(trained_model, img_preprocess)
+
+      # casting to unsigned int and reshape
       tumor_pred = np.array(tumor_pred).astype(np.uintc)
-      # reshape
       tumor_pred = np.reshape(tumor_pred, tuple(reversed(tumor_pred.shape)))
       slicer.util.updateVolumeFromArray(segVolumeNode, tumor_pred)
 
