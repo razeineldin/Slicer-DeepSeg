@@ -11,12 +11,6 @@ from tensorflow_addons.layers import InstanceNormalization
 
 import numpy as np
 
-# define input
-#config["image_shape"] = (192, 224, 160) # the input to the pre-trained model
-image_shape = (160, 224, 192) # the input to the pre-trained model
-tumor_type = "all" # "all", "whole", "core", "enhancing"
-predict_name = 'BraTS20_sample_case_pred.nii.gz' # name of the predicted segmentation
-
 def get_whole_tumor_mask(data):
     return data > 0
 
@@ -26,7 +20,35 @@ def get_tumor_core_mask(data):
 def get_enhancing_tumor_mask(data):
     return data == 4
 
-def predict_segmentations(model, images):
+def postprocess_tumor(seg_data, tumor_type = "all", output_shape = (240, 240, 155)):
+    # post-process the enhancing tumor region
+    seg_enhancing = (seg_data == 3)
+    if np.sum(seg_enhancing) < 1000:
+        seg_data[seg_enhancing] = 1
+    else:
+        seg_data[seg_enhancing] = 4
+
+    if tumor_type == "whole":
+        seg_data = get_whole_tumor_mask(seg_data)
+    elif tumor_type == "core":
+        pred_seg_datadata = get_tumor_core_mask(seg_data)
+    elif tumor_type == "enhancing":
+        seg_data = get_enhancing_tumor_mask(seg_data)
+
+    input_shape = np.array(seg_data.shape)
+    output_shape = np.array(output_shape)
+    offset = np.array((output_shape - input_shape)/2).astype(np.int)
+    offset[offset<0] = 0
+    x, y, z = offset
+
+    # pad the preprocessed image
+    padded_seg = np.zeros(output_shape)
+    #padded_seg[x:x+seg_data.shape[0],y:y+seg_data.shape[1],z:z+seg_data.shape[2]] = seg_data
+    padded_seg[x:x+seg_data.shape[0],y:y+seg_data.shape[1],z:z+seg_data.shape[2]] = seg_data[:,:,:padded_seg.shape[2]]
+
+    return padded_seg
+
+def predict_segmentations(model, images, tumor_type = "all", output_shape = (240, 240, 155)):
     # load the MRI imaging modalities (flair, t1, t1ce, t2)
     img_arrays = np.array(images).astype(np.float)
 
@@ -35,14 +57,9 @@ def predict_segmentations(model, images):
 
     # convert into 1-channel segmentation
     pred_data = pred_data_3ch.argmax(axis=-1)
-    pred_data[pred_data == 3] = 4
 
-    if tumor_type == "whole":
-        pred_data = get_whole_tumor_mask(pred_data)
-    elif tumor_type == "core":
-        pred_data = get_tumor_core_mask(pred_data)
-    elif tumor_type == "enhancing":
-        pred_data = get_enhancing_tumor_mask(pred_data)
+    # post-process the output segmentation
+    pred_data = postprocess_tumor(pred_data, tumor_type, output_shape)
 
     return pred_data
 

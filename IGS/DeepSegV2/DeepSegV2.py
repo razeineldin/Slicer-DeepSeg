@@ -345,7 +345,8 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       trained_model.load_weights(modelPath)#, by_name=True)
 
       # predict the tumor boundries
-      tumor_pred = DeepSegV2Lib.predict.predict_segmentations(trained_model, img_preprocess)
+      tumor_pred = DeepSegV2Lib.predict.predict_segmentations(trained_model, img_preprocess, 
+                  tumor_type = config['tumor_type'], output_shape=(imgs.shape[0], imgs.shape[1], imgs.shape[2]))
 
       # casting to unsigned int and reshape
       tumor_pred = np.array(tumor_pred).astype(np.uintc)
@@ -362,7 +363,6 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
       stopTime = time.time()
       logging.info('Processing completed in {0:.2f} seconds'.format(stopTime-startTime))
-
       #######################################################################
 
     except Exception as e:
@@ -416,18 +416,18 @@ class DeepSegV2Logic(ScriptedLoadableModuleLogic):
 
     return img
 
-  def crop_image(self, img, new_shape=np.array(config["image_shape"])):
+  def crop_image(self, img, output_shape=np.array(config["image_shape"])):
     # manual cropping to config["image_shape"] = (160, 224, 192)
     input_shape = np.array(img.shape)
     # center the cropped image
-    offset = np.array((input_shape - new_shape)/2).astype(np.int)
+    offset = np.array((input_shape - output_shape)/2).astype(np.int)
     offset[offset<0] = 0
     x, y, z = offset
-    crop_img = img[x:x+new_shape[0], y:y+new_shape[1], z:z+new_shape[2]]
+    crop_img = img[x:x+output_shape[0], y:y+output_shape[1], z:z+output_shape[2]]
 
     # pad the preprocessed image
-    padded_img = np.zeros(new_shape)
-    x, y, z = np.array((new_shape - np.array(crop_img.shape))/2).astype(np.int)
+    padded_img = np.zeros(output_shape)
+    x, y, z = np.array((output_shape - np.array(crop_img.shape))/2).astype(np.int)
     padded_img[x:x+crop_img.shape[0],y:y+crop_img.shape[1],z:z+crop_img.shape[2]] = crop_img
 
     return padded_img
@@ -442,10 +442,6 @@ class DeepSegV2Logic(ScriptedLoadableModuleLogic):
   def preprocess_images(self, imgs, dim=config["input_shape"]):
     # TODO: automatic cropping using img[~np.all(img == 0, axis=1)]
     img_preprocess = np.zeros(dim)
-    """for i, img in enumerate(imgs):
-      img_preprocess[:,:,:,i] = self.crop_image(img)
-      img_preprocess[:,:,:,i] = self.norm_image(img_preprocess[:,:,:,i])"""
-
     print("img_preprocess", img_preprocess.shape)
     for i in range(dim[-1]):
       img_preprocess[:,:,:,i] = self.crop_image(imgs[:,:,:,i])
