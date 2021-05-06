@@ -66,9 +66,7 @@ config = dict()
 
 # define input
 config["image_shape"] = (192, 224, 160) # the input to the pre-trained model
-#config["image_shape"] = (160, 224, 192) # the input to the pre-trained model
 
-# OR one variable for all MRI modalities
 config["images"] = ['BraTS20_sample_case_flair.nii.gz', 'BraTS20_sample_case_t1.nii.gz', 
                      'BraTS20_sample_case_t1ce.nii.gz', 'BraTS20_sample_case_t2.nii.gz']
 
@@ -76,12 +74,7 @@ config["images"] = ['BraTS20_sample_case_flair.nii.gz', 'BraTS20_sample_case_t1.
 config["input_shape"] = (config["image_shape"][0], config["image_shape"][1], 
                          config["image_shape"][2], len(config["images"]))
 
-config['model_path'] = os.path.join('DeepSegV2Lib', 'weights', 'model-238.h5')
 config['tumor_type'] = "all" # "all", "whole", "core", "enhancing"
-
-config["preprocess_dir"] = 'BraTS20_sample_case_preprocess' # directory of the pre-processed image(s)
-config["predict_dir"] = 'BraTS20_sample_case_predict' # directory of the predicted segmentation
-
 #######################################################################
 
 #
@@ -145,6 +138,17 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     # "mrmlSceneChanged(vtkMRMLScene*)" signal in is connected to each MRML widget's.
     # "setMRMLScene(vtkMRMLScene*)" slot.
     uiWidget.setMRMLScene(slicer.mrmlScene)
+
+    # Show slice views in 3D window
+    layoutManager = slicer.app.layoutManager()
+    for sliceViewName in layoutManager.sliceViewNames():
+      controller = layoutManager.sliceWidget(sliceViewName).sliceController()
+      controller.setSliceVisible(True)
+
+    # Center the 3D View on the Scene
+    threeDWidget = layoutManager.threeDWidget(0)
+    threeDView = threeDWidget.threeDView()
+    threeDView.resetFocalPoint()
 
     # Create logic class. Logic implements all computations that should be possible to run
     # in batch mode, without a graphical user interface.
