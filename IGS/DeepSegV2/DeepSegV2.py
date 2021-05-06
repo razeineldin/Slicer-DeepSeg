@@ -328,7 +328,7 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
       # preprocess image(s)
       img_preprocess = self.logic.preprocess_images(imgs)
-      print("img_preprocess:", img_preprocess.shape)
+      #print("img_preprocess:", img_preprocess.shape)
       #print("img_preprocess 0:", img_preprocess[:,:,:,0].shape)
       #img_preprocess1 = np.swapaxes(img_preprocess[:,:,:,0], 0, 2)
       #slicer.util.updateVolumeFromArray(segVolumeNode, img_preprocess1)
@@ -365,6 +365,10 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       slicer.util.setSliceViewerLayers(background=inputVolume1)
       slicer.util.setSliceViewerLayers(foreground=segVolumeNode)
       slicer.util.setSliceViewerLayers(foregroundOpacity=0.5)
+
+      # change the tumor colo space
+      displayNode = segVolumeNode.GetDisplayNode()
+      displayNode.SetAndObserveColorNodeID('vtkMRMLColorTableNodeLabels') #vtkMRMLColorTableNodeRainbow
 
       stopTime = time.time()
       logging.info('Processing completed in {0:.2f} seconds'.format(stopTime-startTime))
@@ -437,24 +441,14 @@ class DeepSegV2Logic(ScriptedLoadableModuleLogic):
 
     return padded_img
 
-  def preprocess_image(self, img):
-    # TODO: automatic cropping using img[~np.all(img == 0, axis=1)]
-    img_crop = self.crop_image(img)
-    img_norm = self.norm_image(img_crop)
-
-    return img_norm
-
   def preprocess_images(self, imgs, dim=config["input_shape"]):
     # TODO: automatic cropping using img[~np.all(img == 0, axis=1)]
     img_preprocess = np.zeros(dim)
-    print("img_preprocess", img_preprocess.shape)
     for i in range(dim[-1]):
       img_preprocess[:,:,:,i] = self.crop_image(imgs[:,:,:,i])
       img_preprocess[:,:,:,i] = self.norm_image(img_preprocess[:,:,:,i])
 
-
     return img_preprocess
-
   #######################################################################
 
 #
