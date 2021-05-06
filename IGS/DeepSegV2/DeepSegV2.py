@@ -3,6 +3,9 @@ import unittest
 import logging
 import vtk, qt, ctk, slicer
 
+from slicer.ScriptedLoadableModule import *
+from slicer.util import VTKObservationMixin
+
 ####################### add your imports here #######################
 """
 try:
@@ -47,23 +50,23 @@ import tensorflow as tf
 
 # utlity functions imports
 import matplotlib.pyplot as plt
+from tensorflow.keras.utils import get_file
+
 #from nilearn.image import crop_img as crop_image
 
 # import functions from models module
-#from DeepSegV2Lib.models import *
+from DeepSegV2Lib.models import *
+from DeepSegV2Lib.predict import *
 import DeepSegV2Lib
+#from DeepSegV2Lib import *
 #####################################################################
-
-from slicer.ScriptedLoadableModule import *
-from slicer.util import VTKObservationMixin
-
 
 ####################### add your variables here #######################
 config = dict()
 
 # define input
-#config["image_shape"] = (192, 224, 160) # the input to the pre-trained model
-config["image_shape"] = (160, 224, 192) # the input to the pre-trained model
+config["image_shape"] = (192, 224, 160) # the input to the pre-trained model
+#config["image_shape"] = (160, 224, 192) # the input to the pre-trained model
 
 # OR one variable for all MRI modalities
 config["images"] = ['BraTS20_sample_case_flair.nii.gz', 'BraTS20_sample_case_t1.nii.gz', 
@@ -75,6 +78,9 @@ config["input_shape"] = (config["image_shape"][0], config["image_shape"][1],
 
 config['model_path'] = os.path.join('DeepSegV2Lib', 'weights', 'model-238.h5')
 config['tumor_type'] = "all" # "all", "whole", "core", "enhancing"
+
+config["preprocess_dir"] = 'BraTS20_sample_case_preprocess' # directory of the pre-processed image(s)
+config["predict_dir"] = 'BraTS20_sample_case_predict' # directory of the predicted segmentation
 
 #######################################################################
 
@@ -304,37 +310,51 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       startTime = time.time()
       logging.info('Processing started')
 
-      inputVolume = self.ui.FLAIRSelector.currentNode()
+      inputVolume1 = self.ui.FLAIRSelector.currentNode()
+      inputVolume2 = self.ui.T1Selector.currentNode()
+      inputVolume3 = self.ui.T1ceSelector.currentNode()
+      inputVolume4 = self.ui.T2Selector.currentNode()
       segVolumeNode = self.ui.outputSelector.currentNode()
 
       # get the numpy array(s)
-      img = slicer.util.arrayFromVolume(inputVolume)
-      print("img:", img.shape)
-      # preprocess image(s)
-      img_preprocess = self.logic.preprocess_image(img)
-      print("img_preprocess:", img_preprocess.shape)
-      # TODO: tumor prediction
+      img1 = slicer.util.arrayFromVolume(inputVolume1)
+      img2 = slicer.util.arrayFromVolume(inputVolume2)
+      img3 = slicer.util.arrayFromVolume(inputVolume3)
+      img4 = slicer.util.arrayFromVolume(inputVolume4)
 
+      imgs = np.stack([img1, img2, img3, img4], axis=0)
+
+      print("imgs:", imgs.shape)
+      imgs = np.reshape(imgs, imgs.shape)
+
+      # preprocess image(s)
+      img_preprocess = self.logic.preprocess_images(imgs)
+      print("img_preprocess:", img_preprocess.shape)
+      print("img_preprocess 0:", img_preprocess[:,:,:,0].shape)
+
+      img_preprocess1 = np.reshape(img_preprocess[:,:,:,0], tuple(reversed(config["image_shape"])))
+      #slicer.util.updateVolumeFromArray(segVolumeNode, img_preprocess1)
+
+      # predict tumor boundaries
       # create the residual U-Net model
       trained_model = DeepSegV2Lib.models.get_model(input_shape=config["input_shape"])
-      #trained_model.summary(line_length=120)
 
       # load the weights of the pre-trained model
       modelPath = self.ui.ModelPath.currentPath
       trained_model.load_weights(modelPath)#, by_name=True)
 
       # predict and save the tumor boundries
-      #predict_segmentation(trained_model, preprocess_dir=config['preprocess_dir'], 
-      #                    predict_dir=config['predict_dir'], images=config["images"])
-
-
-      slicer.util.updateVolumeFromArray(segVolumeNode, img_preprocess)
+      tumor_pred = DeepSegV2Lib.predict.predict_segmentations(trained_model, img_preprocess)
+      tumor_pred = np.array(tumor_pred).astype(np.uintc)
+      # reshape
+      tumor_pred = np.reshape(tumor_pred, tuple(reversed(tumor_pred.shape)))
+      slicer.util.updateVolumeFromArray(segVolumeNode, tumor_pred)
 
       # fix the orientation problem
-      segVolumeNode.SetOrigin(inputVolume.GetOrigin())
-      segVolumeNode.SetSpacing(inputVolume.GetSpacing())
+      segVolumeNode.SetOrigin(inputVolume1.GetOrigin())
+      segVolumeNode.SetSpacing(inputVolume1.GetSpacing())
       ijkToRasDirections = vtk.vtkMatrix4x4()
-      inputVolume.GetIJKToRASDirectionMatrix(ijkToRasDirections)
+      inputVolume1.GetIJKToRASDirectionMatrix(ijkToRasDirections)
       segVolumeNode.SetIJKToRASDirectionMatrix(ijkToRasDirections)
       slicer.util.setSliceViewerLayers(background=segVolumeNode)
 
@@ -410,12 +430,21 @@ class DeepSegV2Logic(ScriptedLoadableModuleLogic):
 
     return padded_img
 
-  def preprocess_image(self, img, dim=config["image_shape"]):
+  def preprocess_image(self, img):
     # TODO: automatic cropping using img[~np.all(img == 0, axis=1)]
     img_crop = self.crop_image(img)
     img_norm = self.norm_image(img_crop)
 
     return img_norm
+
+  def preprocess_images(self, imgs, dim=config["input_shape"]):
+    # TODO: automatic cropping using img[~np.all(img == 0, axis=1)]
+    img_preprocess = np.zeros(dim)
+    for i, img in enumerate(imgs):
+      img_preprocess[:,:,:,i] = self.crop_image(img)
+      img_preprocess[:,:,:,i] = self.norm_image(img_preprocess[:,:,:,i])
+
+    return img_preprocess
 
   #######################################################################
 
