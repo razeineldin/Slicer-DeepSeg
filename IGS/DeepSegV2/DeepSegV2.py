@@ -353,13 +353,18 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       tumor_pred = np.swapaxes(tumor_pred, 0, 2)
       slicer.util.updateVolumeFromArray(segVolumeNode, tumor_pred)
 
+
       # fix the orientation problem
       segVolumeNode.SetOrigin(inputVolume1.GetOrigin())
       segVolumeNode.SetSpacing(inputVolume1.GetSpacing())
       ijkToRasDirections = vtk.vtkMatrix4x4()
       inputVolume1.GetIJKToRASDirectionMatrix(ijkToRasDirections)
       segVolumeNode.SetIJKToRASDirectionMatrix(ijkToRasDirections)
-      slicer.util.setSliceViewerLayers(background=segVolumeNode)
+
+      # view the segmentation output in slicer
+      slicer.util.setSliceViewerLayers(background=inputVolume1)
+      slicer.util.setSliceViewerLayers(foreground=segVolumeNode)
+      slicer.util.setSliceViewerLayers(foregroundOpacity=0.5)
 
       stopTime = time.time()
       logging.info('Processing completed in {0:.2f} seconds'.format(stopTime-startTime))
