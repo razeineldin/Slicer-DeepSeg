@@ -322,17 +322,15 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       img3 = slicer.util.arrayFromVolume(inputVolume3)
       img4 = slicer.util.arrayFromVolume(inputVolume4)
 
-      imgs = np.stack([img1, img2, img3, img4], axis=0)
-
-      print("imgs:", imgs.shape)
-      imgs = np.reshape(imgs, imgs.shape)
+      imgs = np.stack([img1, img2, img3, img4], axis=3)
+      # fix the data structure of nrrd (x,y,z) and numpy (z,y,x)
+      imgs = np.swapaxes(imgs, 0, 2)
 
       # preprocess image(s)
       img_preprocess = self.logic.preprocess_images(imgs)
       print("img_preprocess:", img_preprocess.shape)
-      print("img_preprocess 0:", img_preprocess[:,:,:,0].shape)
-
-      img_preprocess1 = np.reshape(img_preprocess[:,:,:,0], tuple(reversed(config["image_shape"])))
+      #print("img_preprocess 0:", img_preprocess[:,:,:,0].shape)
+      #img_preprocess1 = np.swapaxes(img_preprocess[:,:,:,0], 0, 2)
       #slicer.util.updateVolumeFromArray(segVolumeNode, img_preprocess1)
 
       # predict tumor boundaries
@@ -351,7 +349,7 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
       # casting to unsigned int and reshape
       tumor_pred = np.array(tumor_pred).astype(np.uintc)
-      tumor_pred = np.reshape(tumor_pred, tuple(reversed(tumor_pred.shape)))
+      tumor_pred = np.swapaxes(tumor_pred, 0, 2)
       slicer.util.updateVolumeFromArray(segVolumeNode, tumor_pred)
 
       # fix the orientation problem
@@ -444,9 +442,15 @@ class DeepSegV2Logic(ScriptedLoadableModuleLogic):
   def preprocess_images(self, imgs, dim=config["input_shape"]):
     # TODO: automatic cropping using img[~np.all(img == 0, axis=1)]
     img_preprocess = np.zeros(dim)
-    for i, img in enumerate(imgs):
+    """for i, img in enumerate(imgs):
       img_preprocess[:,:,:,i] = self.crop_image(img)
+      img_preprocess[:,:,:,i] = self.norm_image(img_preprocess[:,:,:,i])"""
+
+    print("img_preprocess", img_preprocess.shape)
+    for i in range(dim[-1]):
+      img_preprocess[:,:,:,i] = self.crop_image(imgs[:,:,:,i])
       img_preprocess[:,:,:,i] = self.norm_image(img_preprocess[:,:,:,i])
+
 
     return img_preprocess
 
