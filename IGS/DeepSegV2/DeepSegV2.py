@@ -7,7 +7,7 @@ from slicer.ScriptedLoadableModule import *
 from slicer.util import VTKObservationMixin
 
 ####################### add your imports here #######################
-"""
+
 try:
   import matplotlib.pyplot as plt
 except:
@@ -39,7 +39,7 @@ try:
 except:
   slicer.util.pip_install('tensorflow')
   import tensorflow as tf
-"""
+
 import numpy as np
 import nibabel as nib
 
