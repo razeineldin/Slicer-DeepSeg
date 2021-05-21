@@ -161,6 +161,23 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.addObserver(slicer.mrmlScene, slicer.mrmlScene.EndCloseEvent, self.onSceneEndClose)
 
     ####################### add your connections here #######################
+
+    self.restoreDefaultsButton = qt.QPushButton("Restore Defaults")
+    self.restoreDefaultsButton.toolTip = "Restore the default parameters."
+    self.restoreDefaultsButton.enabled = True
+
+    self.cancelButton = qt.QPushButton("Cancel")
+    self.cancelButton.toolTip = "Abort the algorithm."
+    self.cancelButton.enabled = False
+
+    hlayout = qt.QHBoxLayout()
+
+    hlayout.addWidget(self.restoreDefaultsButton)
+    hlayout.addStretch(1)
+    hlayout.addWidget(self.cancelButton)
+    hlayout.addWidget(self.ui.applyButton)
+    self.layout.addLayout(hlayout)
+
     # These connections ensure that whenever user changes some settings on the GUI, that is saved in the MRML scene
     # (in the selected parameter node).
     #self.ui.inputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
@@ -172,6 +189,11 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     # Buttons
     self.ui.applyButton.connect('clicked(bool)', self.onApplyButton)
+    self.cancelButton.connect('clicked(bool)', self.onCancelButton)
+    self.restoreDefaultsButton.connect('clicked(bool)', self.onRestoreDefaultsButton)
+
+
+
     #########################################################################
 
     # Make sure parameter node is initialized (needed for module reload)
@@ -302,6 +324,9 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     self._parameterNode.EndModify(wasModified)
 
+  # TODO: Restore Defaults
+  # def onRestoreDefaultsButton(self):
+
   def onApplyButton(self):
     """
     Run processing when user clicks "Apply" button.
@@ -382,6 +407,9 @@ class DeepSegV2Widget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       slicer.util.errorDisplay("Failed to compute results: "+str(e))
       import traceback
       traceback.print_exc()
+
+  # TODO: Cancel
+  # def onCancelButton(self):
 
 
 #
