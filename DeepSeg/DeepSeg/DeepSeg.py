@@ -207,11 +207,14 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.ui.tumourTypeSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
 
     # Buttons
-    self.ui.applyButton.connect('clicked(bool)', self.onApplyButton)
-    self.ui.editSegButton.connect('clicked(bool)', self.onEditSegButton)
-    self.cancelButton.connect('clicked(bool)', self.onCancelButton)
-    self.restoreDefaultsButton.connect('clicked(bool)', self.onRestoreDefaultsButton)
     self.ui.backgroundColourButton.connect('clicked(bool)', self.onBackgroundColourButton)
+
+    self.ui.show3DButton.connect('clicked(bool)', self.onShow3DButton)
+    self.ui.editSegButton.connect('clicked(bool)', self.onEditSegButton)
+
+    self.restoreDefaultsButton.connect('clicked(bool)', self.onRestoreDefaultsButton)
+    self.cancelButton.connect('clicked(bool)', self.onCancelButton)
+    self.ui.applyButton.connect('clicked(bool)', self.onApplyButton)
     #########################################################################
 
     # Make sure parameter node is initialized (needed for module reload)
@@ -309,7 +312,38 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.ui.outputSelector.setCurrentNode(self._parameterNode.GetNodeReference("OutputVolume"))
 
     # Update buttons states and tooltips
-    if self._parameterNode.GetNodeReference("InputVolume1") and self._parameterNode.GetNodeReference("OutputVolume"):
+    # TODO: Background Colour Button
+
+    # show 3D Button
+    if self._parameterNode.GetNodeReference("OutputVolume"):
+      self.ui.show3DButton.toolTip = "Create 3D Model"
+      self.ui.show3DButton.enabled = True
+    else:
+      self.ui.show3DButton.toolTip = "Find tumour segmentation before editing the segmentation"
+      self.ui.show3DButton.enabled = False
+
+    # edit seg Button
+    if self._parameterNode.GetNodeReference("OutputVolume"):
+      self.ui.editSegButton.toolTip = "Switch to Segment Editor"
+      self.ui.editSegButton.enabled = True
+    else:
+      self.ui.editSegButton.toolTip = "Find tumor segmentation before editing the segmentation"
+      self.ui.editSegButton.enabled = False
+
+    # restore defaults Button
+    self.ui.restoreDefaultsButton.toolTip = "Reset parameters to default"
+    self.ui.restoreDefaultsButton.enabled = True
+
+    # TODO: Cancel Button
+    '''if self._parameterNode.GetNodeReference("InputVolume1") and self._parameterNode.GetNodeReference("OutputVolume"):
+      self.ui.cancelButton.toolTip = "Cancel the execution of the module"
+      self.ui.cancelButton.enabled = True
+    else:
+      self.ui.cancelButton.toolTip = "Cancel the execution of the module"
+      self.ui.cancelButton.enabled = False'''
+
+    # apply Button
+    if self._parameterNodqe.GetNodeReference("InputVolume1") and self._parameterNode.GetNodeReference("OutputVolume"):
       self.ui.applyButton.toolTip = "Compute output segmentation"
       self.ui.applyButton.enabled = True
     else:
@@ -343,14 +377,25 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self._parameterNode.EndModify(wasModified)
 
   # TODO: Background Colour
-  '''
   def onBackgroundColourButton(self):
     renderWindow = slicer.app.layoutManager().threeDWidget(0).threeDView().renderWindow()
     renderer = renderWindow.GetRenderers().GetFirstRenderer()
     renderer.SetBackground(1, 0, 0)
     renderer.SetBackground2(1, 0, 0)
     renderWindow.Render()
-  '''
+
+  # TODO: Show 3D
+  def onShow3DButton(self):
+    labelmapVolumeNode = self._parameterNode.GetNodeReference("OutputVolume")
+    seg = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentationNode")
+    slicer.modules.segmentations.logic().ImportLabelmapToSegmentationNode(labelmapVolumeNode, seg)
+    seg.CreateClosedSurfaceRepresentation()
+    slicer.mrmlScene.RemoveNode(labelmapVolumeNode)
+
+  # TODO: Edit Segmentation
+  def onEditSegButton(self):
+    # switch to Segment Editor in order to edit the segments manually
+    slicer.util.selectModule("Segment Editor")
 
   # TODO: Restore Defaults
   # def onRestoreDefaultsButton(self):
