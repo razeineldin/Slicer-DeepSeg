@@ -395,7 +395,7 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
   # TODO: Edit Segmentation
   def onEditSegButton(self):
     # switch to Segment Editor in order to edit the segments manually
-    slicer.util.selectModule("Segment Editor")
+    slicer.util.selectModule("SegmentEditor")
 
   # TODO: Restore Defaults
   # def onRestoreDefaultsButton(self):
