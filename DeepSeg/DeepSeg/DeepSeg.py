@@ -91,6 +91,8 @@ config["input_shape"] = (config["image_shape"][0], config["image_shape"][1],
 config["input_shape"] = (192, 224, 160, 1)
 
 config['tumor_type'] = "all" # "all", "whole", "core", "enhancing"
+
+
 #######################################################################
 
 #
@@ -103,6 +105,7 @@ class DeepSeg(ScriptedLoadableModule):
   """
 
   def __init__(self, parent):
+
     ScriptedLoadableModule.__init__(self, parent)
     self.parent.title = "DeepSeg"  # TODO: make this more human readable by adding spaces
     self.parent.categories=["Examples"]
@@ -118,7 +121,7 @@ See more information in <a href="https://github.com/organization/projectname#Dee
 This file was originally developed by Jean-Christophe Fillion-Robin, Kitware Inc., Andras Lasso, PerkLab,
 and Steve Pieper, Isomics, Inc. and was partially funded by NIH grant 3P41RR013218-12S1.
 """
-
+    #print("Current path:", os.path.dirname(self.parent.path))
 #
 # DeepSegWidget
 #
@@ -154,17 +157,6 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     # "mrmlSceneChanged(vtkMRMLScene*)" signal in is connected to each MRML widget's.
     # "setMRMLScene(vtkMRMLScene*)" slot.
     uiWidget.setMRMLScene(slicer.mrmlScene)
-
-    # Show slice views in 3D window
-    layoutManager = slicer.app.layoutManager()
-    for sliceViewName in layoutManager.sliceViewNames():
-      controller = layoutManager.sliceWidget(sliceViewName).sliceController()
-      controller.setSliceVisible(True)
-
-    # Center the 3D View on the Scene
-    threeDWidget = layoutManager.threeDWidget(0)
-    threeDView = threeDWidget.threeDView()
-    threeDView.resetFocalPoint()
 
     # Create logic class. Logic implements all computations that should be possible to run
     # in batch mode, without a graphical user interface.
@@ -266,7 +258,12 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     # Select default input nodes if nothing is selected yet to save a few clicks for the user
     if not self._parameterNode.GetNodeReference("InputVolume1"):
-      firstVolumeNode = slicer.mrmlScene.GetFirstNodeByClass("vtkMRMLScalarVolumeNode")
+      firstVolumeNode = slicer.mrmlScene.GetFirstNodeByClass("vtkMRMLScalarVolumeNode") # vtkMRMLSegmentationNode
+      #firstVolumeNode = slicer.mrmlScene.GetFirstNodeByName("DeepSegSampleDataFLAIR")
+
+      #firstVolumeNode = slicer.mrmlScene.GetNodeByID("vtkMRMLScalarVolumeNode1")
+      #shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+
       if firstVolumeNode:
         self._parameterNode.SetNodeReferenceID("InputVolume1", firstVolumeNode.GetID())
 
@@ -331,8 +328,8 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.ui.editSegButton.enabled = False
 
     # restore defaults Button
-    self.ui.restoreDefaultsButton.toolTip = "Reset parameters to default"
-    self.ui.restoreDefaultsButton.enabled = True
+    #self.ui.restoreDefaultsButton.toolTip = "Reset parameters to default"
+    #self.ui.restoreDefaultsButton.enabled = True
 
     # TODO: Cancel Button
     '''if self._parameterNode.GetNodeReference("InputVolume1") and self._parameterNode.GetNodeReference("OutputVolume"):
@@ -343,7 +340,7 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.ui.cancelButton.enabled = False'''
 
     # apply Button
-    if self._parameterNodqe.GetNodeReference("InputVolume1") and self._parameterNode.GetNodeReference("OutputVolume"):
+    if self._parameterNode.GetNodeReference("InputVolume1") and self._parameterNode.GetNodeReference("OutputVolume"):
       self.ui.applyButton.toolTip = "Compute output segmentation"
       self.ui.applyButton.enabled = True
     else:
@@ -385,12 +382,46 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     renderWindow.Render()
 
   # TODO: Show 3D
+  def showVolumeRenderingMIP(self, volumeNode, useSliceViewColors=True):
+    """Render volume using maximum intensity projection
+    :param useSliceViewColors: use the same colors as in slice views.
+    """
+    # Get/create volume rendering display node
+    volRenLogic = slicer.modules.volumerendering.logic()
+    displayNode = volRenLogic.GetFirstVolumeRenderingDisplayNode(volumeNode)
+    if not displayNode:
+      displayNode = volRenLogic.CreateDefaultVolumeRenderingNodes(volumeNode)
+    # Choose MIP volume rendering preset
+    if useSliceViewColors:
+      volRenLogic.CopyDisplayToVolumeRenderingDisplayNode(displayNode)
+    else:
+      displayNode.GetVolumePropertyNode().Copy(volRenLogic.GetPresetByName("MR-Default")) #"MR-MIP"
+
+    # Switch views to MIP mode
+    #for viewNode in slicer.util.getNodesByClass("vtkMRMLViewNode"):
+    #  viewNode.SetRaycastTechnique(slicer.vtkMRMLViewNode.MaximumIntensityProjection)
+    # Show volume rendering
+    displayNode.SetVisibility(True)
+
   def onShow3DButton(self):
-    labelmapVolumeNode = self._parameterNode.GetNodeReference("OutputVolume")
+    """ labelmapVolumeNode = self._parameterNode.GetNodeReference("InputVolume1")
     seg = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentationNode")
     slicer.modules.segmentations.logic().ImportLabelmapToSegmentationNode(labelmapVolumeNode, seg)
     seg.CreateClosedSurfaceRepresentation()
-    slicer.mrmlScene.RemoveNode(labelmapVolumeNode)
+    slicer.mrmlScene.RemoveNode(labelmapVolumeNode)"""
+
+    brainVolumeNode = self._parameterNode.GetNodeReference("InputVolume1")
+    tumorVolumeNode = self._parameterNode.GetNodeReference("OutputVolume")
+
+    self.showVolumeRenderingMIP(tumorVolumeNode)
+    self.showVolumeRenderingMIP(brainVolumeNode, useSliceViewColors=False)
+
+    # Center the 3D View on the Scene
+    layoutManager = slicer.app.layoutManager()
+    threeDWidget = layoutManager.threeDWidget(0)
+    threeDView = threeDWidget.threeDView()
+    threeDView.resetFocalPoint()
+
 
   # TODO: Edit Segmentation
   def onEditSegButton(self):
@@ -398,10 +429,12 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     slicer.util.selectModule("SegmentEditor")
 
   # TODO: Restore Defaults
-  # def onRestoreDefaultsButton(self):
+  def onRestoreDefaultsButton(self):
+    logging.info('TODO')
 
   # TODO: Cancel
-  # def onCancelButton(self):
+  def onCancelButton(self):
+    logging.info('TODO')
 
   def onApplyButton(self):
     """
