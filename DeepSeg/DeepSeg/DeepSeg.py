@@ -395,7 +395,8 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     if useSliceViewColors:
       volRenLogic.CopyDisplayToVolumeRenderingDisplayNode(displayNode)
     else:
-      displayNode.GetVolumePropertyNode().Copy(volRenLogic.GetPresetByName("MR-Default")) #"MR-MIP"
+      displayNode.GetVolumePropertyNode().Copy(volRenLogic.GetPresetByName("MR-MIP"))
+      #displayNode.GetVolumePropertyNode().Copy(volRenLogic.GetPresetByName("MR-Default")) #"MR-MIP"
 
     # Switch views to MIP mode
     #for viewNode in slicer.util.getNodesByClass("vtkMRMLViewNode"):
@@ -403,6 +404,27 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     # Show volume rendering
     displayNode.SetVisibility(True)
 
+  def showTransparentRendering(self, volumeNode, maxOpacity=0.2, gradientThreshold=30.0):
+    """Make constant regions transparent and the entire volume somewhat transparent
+    :param maxOpacity: lower value makes the volume more transparent overall
+      (value is between 0.0 and 1.0)
+    :param gradientThreshold: regions that has gradient value below this threshold will be made transparent
+      (minimum value is 0.0, higher values make more tissues transparent, starting with soft tissues)
+    """
+    # Get/create volume rendering display node
+    volRenLogic = slicer.modules.volumerendering.logic()
+    displayNode = volRenLogic.GetFirstVolumeRenderingDisplayNode(volumeNode)
+    if not displayNode:
+      displayNode = volRenLogic.CreateDefaultVolumeRenderingNodes(volumeNode)
+    # Set up gradient vs opacity transfer function
+    gradientOpacityTransferFunction = displayNode.GetVolumePropertyNode().GetVolumeProperty().GetGradientOpacity()
+    gradientOpacityTransferFunction.RemoveAllPoints()
+    gradientOpacityTransferFunction.AddPoint(0, 0.0)
+    gradientOpacityTransferFunction.AddPoint(gradientThreshold-1, 0.0)
+    gradientOpacityTransferFunction.AddPoint(gradientThreshold+1, maxOpacity)
+    # Show volume rendering
+    displayNode.SetVisibility(True)
+  
   def onShow3DButton(self):
     """ labelmapVolumeNode = self._parameterNode.GetNodeReference("InputVolume1")
     seg = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentationNode")
@@ -414,7 +436,9 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     tumorVolumeNode = self._parameterNode.GetNodeReference("OutputVolume")
 
     self.showVolumeRenderingMIP(tumorVolumeNode)
-    self.showVolumeRenderingMIP(brainVolumeNode, useSliceViewColors=False)
+    #self.showTransparentRendering(tumorVolumeNode, 0.2, 30.0)
+    self.showTransparentRendering(brainVolumeNode, 0.3, 60.0)
+    #self.showVolumeRenderingMIP(brainVolumeNode, useSliceViewColors=False)
 
     # Center the 3D View on the Scene
     layoutManager = slicer.app.layoutManager()
