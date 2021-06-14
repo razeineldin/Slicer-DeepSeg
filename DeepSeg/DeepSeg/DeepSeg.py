@@ -31,6 +31,7 @@ except:
   from nilearn.image import crop_img as crop_image
 
 import sys
+
 sys.argv = ['pdm']
 import tensorflow.python
 
@@ -44,6 +45,7 @@ import numpy as np
 import nibabel as nib
 
 import sys
+
 sys.argv = ['pdm']
 import tensorflow.python
 import tensorflow as tf
@@ -52,22 +54,23 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 from tensorflow.keras.utils import get_file
 
-#from nilearn.image import crop_img as crop_image
+# from nilearn.image import crop_img as crop_image
 
 # import functions from models module
 from DeepSegLib.models import *
 from DeepSegLib.predict import *
 import DeepSegLib
-#from DeepSegLib import *
+# from DeepSegLib import *
 
 import os
+
 # Tensorflow 2.XX\n",
 if float(tf.__version__[:3]) >= 2.0:
   os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-  os.environ["CUDA_VISIBLE_DEVICES"] = '0' # '0,1'
+  os.environ["CUDA_VISIBLE_DEVICES"] = '0'  # '0,1'
 
   gpus = tf.config.experimental.list_physical_devices('GPU')
-  #print("Num GPUs Available:", len(gpus))
+  # print("Num GPUs Available:", len(gpus))
   if gpus:
     for gpu in gpus:
       tf.config.experimental.set_memory_growth(gpu, True)
@@ -80,17 +83,17 @@ if float(tf.__version__[:3]) >= 2.0:
 config = dict()
 
 # define input
-config["image_shape"] = (192, 224, 160) # the input to the pre-trained model
+config["image_shape"] = (192, 224, 160)  # the input to the pre-trained model
 
-config["images"] = ['BraTS20_sample_case_flair.nii.gz', 'BraTS20_sample_case_t1.nii.gz', 
-                     'BraTS20_sample_case_t1ce.nii.gz', 'BraTS20_sample_case_t2.nii.gz']
+config["images"] = ['BraTS20_sample_case_flair.nii.gz', 'BraTS20_sample_case_t1.nii.gz',
+                    'BraTS20_sample_case_t1ce.nii.gz', 'BraTS20_sample_case_t2.nii.gz']
 
 # model parameters
-config["input_shape"] = (config["image_shape"][0], config["image_shape"][1], 
+config["input_shape"] = (config["image_shape"][0], config["image_shape"][1],
                          config["image_shape"][2], len(config["images"]))
 config["input_shape"] = (192, 224, 160, 1)
 
-config['tumor_type'] = "all" # "all", "whole", "core", "enhancing"
+config['tumor_type'] = "all"  # "all", "whole", "core", "enhancing"
 
 
 #######################################################################
@@ -105,12 +108,11 @@ class DeepSeg(ScriptedLoadableModule):
   """
 
   def __init__(self, parent):
-
     ScriptedLoadableModule.__init__(self, parent)
     self.parent.title = "DeepSeg"  # TODO: make this more human readable by adding spaces
-    self.parent.categories=["Examples"]
+    self.parent.categories = ["Examples"]
     self.parent.dependencies = []  # TODO: add here list of module names that this module requires
-    self.parent.contributors=["Ramy Zeineldin (Reutlingen University)"]
+    self.parent.contributors = ["Ramy Zeineldin (Reutlingen University)"]
     # TODO: update with short description of the module and a link to online module documentation
     self.parent.helpText = """
 This is an example of scripted loadable module bundled in an extension.
@@ -121,7 +123,9 @@ See more information in <a href="https://github.com/organization/projectname#Dee
 This file was originally developed by Jean-Christophe Fillion-Robin, Kitware Inc., Andras Lasso, PerkLab,
 and Steve Pieper, Isomics, Inc. and was partially funded by NIH grant 3P41RR013218-12S1.
 """
-    #print("Current path:", os.path.dirname(self.parent.path))
+    # print("Current path:", os.path.dirname(self.parent.path))
+
+
 #
 # DeepSegWidget
 #
@@ -172,13 +176,29 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     # These connections ensure that whenever user changes some settings on the GUI, that is saved in the MRML scene
     # (in the selected parameter node).
 
+    # Status and Progress
+    statusLabel = qt.QLabel("Status: ")
+    self.currentStatusLabel = qt.QLabel("Idle")
+    hlayout = qt.QHBoxLayout()
+    hlayout.addStretch(1)
+    hlayout.addWidget(statusLabel)
+    hlayout.addWidget(self.currentStatusLabel)
+    self.layout.addLayout(hlayout)
+
+    self.progress = qt.QProgressBar()
+    self.progress.setRange(0, 1000)
+    self.progress.setValue(0)
+    self.layout.addWidget(self.progress)
+    self.progress.hide()
+
+    # Cancel/Restore Defaults/Apply row
     self.restoreDefaultsButton = qt.QPushButton("Restore Defaults")
     self.restoreDefaultsButton.toolTip = "Restore the default parameters."
     self.restoreDefaultsButton.enabled = True
 
     self.cancelButton = qt.QPushButton("Cancel")
     self.cancelButton.toolTip = "Abort the algorithm."
-    self.cancelButton.enabled = False
+    self.cancelButton.enabled = True
 
     hlayout = qt.QHBoxLayout()
 
@@ -188,11 +208,11 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     hlayout.addWidget(self.ui.applyButton)
     self.layout.addLayout(hlayout)
 
-    #self.ui.inputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
+    # self.ui.inputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.FLAIRSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.T1Selector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.T1ceSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
-    self.ui.T2Selector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)    
+    self.ui.T2Selector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.outputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.modalitySelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.inputImageShapeSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
@@ -258,11 +278,11 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     # Select default input nodes if nothing is selected yet to save a few clicks for the user
     if not self._parameterNode.GetNodeReference("InputVolume1"):
-      firstVolumeNode = slicer.mrmlScene.GetFirstNodeByClass("vtkMRMLScalarVolumeNode") # vtkMRMLSegmentationNode
-      #firstVolumeNode = slicer.mrmlScene.GetFirstNodeByName("DeepSegSampleDataFLAIR")
+      firstVolumeNode = slicer.mrmlScene.GetFirstNodeByClass("vtkMRMLScalarVolumeNode")  # vtkMRMLSegmentationNode
+      # firstVolumeNode = slicer.mrmlScene.GetFirstNodeByName("DeepSegSampleDataFLAIR")
 
-      #firstVolumeNode = slicer.mrmlScene.GetNodeByID("vtkMRMLScalarVolumeNode1")
-      #shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+      # firstVolumeNode = slicer.mrmlScene.GetNodeByID("vtkMRMLScalarVolumeNode1")
+      # shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
 
       if firstVolumeNode:
         self._parameterNode.SetNodeReferenceID("InputVolume1", firstVolumeNode.GetID())
@@ -328,16 +348,16 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.ui.editSegButton.enabled = False
 
     # restore defaults Button
-    #self.ui.restoreDefaultsButton.toolTip = "Reset parameters to default"
-    #self.ui.restoreDefaultsButton.enabled = True
+    self.ui.restoreDefaultsButton.toolTip = "Reset parameters to default"
+    self.ui.restoreDefaultsButton.enabled = True
 
     # TODO: Cancel Button
-    '''if self._parameterNode.GetNodeReference("InputVolume1") and self._parameterNode.GetNodeReference("OutputVolume"):
+    if self._parameterNode.GetNodeReference("InputVolume1") and self._parameterNode.GetNodeReference("OutputVolume"):
       self.ui.cancelButton.toolTip = "Cancel the execution of the module"
       self.ui.cancelButton.enabled = True
     else:
       self.ui.cancelButton.toolTip = "Cancel the execution of the module"
-      self.ui.cancelButton.enabled = False'''
+      self.ui.cancelButton.enabled = False
 
     # apply Button
     if self._parameterNode.GetNodeReference("InputVolume1") and self._parameterNode.GetNodeReference("OutputVolume"):
@@ -363,7 +383,7 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     wasModified = self._parameterNode.StartModify()  # Modify all properties in a single batch
 
     ####################### add your ui connected components here #######################
-    #self._parameterNode.SetNodeReferenceID("InputVolume", self.ui.inputSelector.currentNodeID)
+    # self._parameterNode.SetNodeReferenceID("InputVolume", self.ui.inputSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("InputVolume1", self.ui.FLAIRSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("InputVolume2", self.ui.T1Selector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("InputVolume3", self.ui.T1ceSelector.currentNodeID)
@@ -396,10 +416,10 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       volRenLogic.CopyDisplayToVolumeRenderingDisplayNode(displayNode)
     else:
       displayNode.GetVolumePropertyNode().Copy(volRenLogic.GetPresetByName("MR-MIP"))
-      #displayNode.GetVolumePropertyNode().Copy(volRenLogic.GetPresetByName("MR-Default")) #"MR-MIP"
+      # displayNode.GetVolumePropertyNode().Copy(volRenLogic.GetPresetByName("MR-Default")) #"MR-MIP"
 
     # Switch views to MIP mode
-    #for viewNode in slicer.util.getNodesByClass("vtkMRMLViewNode"):
+    # for viewNode in slicer.util.getNodesByClass("vtkMRMLViewNode"):
     #  viewNode.SetRaycastTechnique(slicer.vtkMRMLViewNode.MaximumIntensityProjection)
     # Show volume rendering
     displayNode.SetVisibility(True)
@@ -420,11 +440,11 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     gradientOpacityTransferFunction = displayNode.GetVolumePropertyNode().GetVolumeProperty().GetGradientOpacity()
     gradientOpacityTransferFunction.RemoveAllPoints()
     gradientOpacityTransferFunction.AddPoint(0, 0.0)
-    gradientOpacityTransferFunction.AddPoint(gradientThreshold-1, 0.0)
-    gradientOpacityTransferFunction.AddPoint(gradientThreshold+1, maxOpacity)
+    gradientOpacityTransferFunction.AddPoint(gradientThreshold - 1, 0.0)
+    gradientOpacityTransferFunction.AddPoint(gradientThreshold + 1, maxOpacity)
     # Show volume rendering
     displayNode.SetVisibility(True)
-  
+
   def onShow3DButton(self):
     """ labelmapVolumeNode = self._parameterNode.GetNodeReference("InputVolume1")
     seg = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentationNode")
@@ -436,16 +456,15 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     tumorVolumeNode = self._parameterNode.GetNodeReference("OutputVolume")
 
     self.showVolumeRenderingMIP(tumorVolumeNode)
-    #self.showTransparentRendering(tumorVolumeNode, 0.2, 30.0)
+    # self.showTransparentRendering(tumorVolumeNode, 0.2, 30.0)
     self.showTransparentRendering(brainVolumeNode, 0.3, 60.0)
-    #self.showVolumeRenderingMIP(brainVolumeNode, useSliceViewColors=False)
+    # self.showVolumeRenderingMIP(brainVolumeNode, useSliceViewColors=False)
 
     # Center the 3D View on the Scene
     layoutManager = slicer.app.layoutManager()
     threeDWidget = layoutManager.threeDWidget(0)
     threeDView = threeDWidget.threeDView()
     threeDView.resetFocalPoint()
-
 
   # TODO: Edit Segmentation
   def onEditSegButton(self):
@@ -455,10 +474,26 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
   # TODO: Restore Defaults
   def onRestoreDefaultsButton(self):
     logging.info('TODO')
+    '''
+    self.ui.FLAIRSelector = None
+    self.ui.T1Selector = None
+    self.ui.T1ceSelector = None
+    self.ui.T2Selector = None
+    self.ui.outputSelector = None
+
+    self.updateParameterNodeFromGUI(self.ui.FLAIRSelector.currentNode)
+    self.updateParameterNodeFromGUI(self.ui.T1Selector.currentNode)
+    self.updateParameterNodeFromGUI(self.ui.T1ceSelector.currentNode)
+    self.updateParameterNodeFromGUI(self.ui.T2Selector.currentNode)
+    self.updateParameterNodeFromGUI(self.ui.outputSelector.currentNode)
+    '''
 
   # TODO: Cancel
   def onCancelButton(self):
     logging.info('TODO')
+    self.currentStatusLabel.text = "Aborting"
+    if self.logic:
+      self.logic.abort = True
 
   def onApplyButton(self):
     """
@@ -471,6 +506,7 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       import time
       startTime = time.time()
       logging.info('Processing started')
+      self.currentStatusLabel.text = "Processing finished"
 
       inputVolume1 = self.ui.FLAIRSelector.currentNode()
       inputVolume2 = self.ui.T1Selector.currentNode()
@@ -480,29 +516,29 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
       # get the numpy array(s)
       img1 = slicer.util.arrayFromVolume(inputVolume1)[..., np.newaxis]
-      #img2 = slicer.util.arrayFromVolume(inputVolume2)
-      #img3 = slicer.util.arrayFromVolume(inputVolume3)
-      #img4 = slicer.util.arrayFromVolume(inputVolume4)
+      # img2 = slicer.util.arrayFromVolume(inputVolume2)
+      # img3 = slicer.util.arrayFromVolume(inputVolume3)
+      # img4 = slicer.util.arrayFromVolume(inputVolume4)
 
-      #imgs = np.stack([img1, img2, img3, img4], axis=3)
+      # imgs = np.stack([img1, img2, img3, img4], axis=3)
       # fix the data structure of nrrd (x,y,z) and numpy (z,y,x)
-      #imgs = np.swapaxes(imgs, 0, 2)
+      # imgs = np.swapaxes(imgs, 0, 2)
       img1 = np.swapaxes(img1, 0, 2)
 
       stopTime = time.time()
-      logging.info('Loadind data completed in {0:.2f} seconds'.format(stopTime-startTime))
+      logging.info('Loadind data completed in {0:.2f} seconds'.format(stopTime - startTime))
       startTime = time.time()
 
       # preprocess image(s)
-      #img_preprocess = self.logic.preprocess_images(imgs)
+      # img_preprocess = self.logic.preprocess_images(imgs)
       img_preprocess = self.logic.preprocess_images(img1)
 
-      #print("img_preprocess:", img_preprocess.shape)
-      #print("img_preprocess 0:", img_preprocess[:,:,:,0].shape)
-      #img_preprocess1 = np.swapaxes(img_preprocess[:,:,:,0], 0, 2)
-      #slicer.util.updateVolumeFromArray(segVolumeNode, img_preprocess1)
+      # print("img_preprocess:", img_preprocess.shape)
+      # print("img_preprocess 0:", img_preprocess[:,:,:,0].shape)
+      # img_preprocess1 = np.swapaxes(img_preprocess[:,:,:,0], 0, 2)
+      # slicer.util.updateVolumeFromArray(segVolumeNode, img_preprocess1)
       stopTime = time.time()
-      logging.info('Pre-processing data completed in {0:.2f} seconds'.format(stopTime-startTime))
+      logging.info('Pre-processing data completed in {0:.2f} seconds'.format(stopTime - startTime))
       startTime = time.time()
 
       # predict tumor boundaries
@@ -513,66 +549,58 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       # load weights of the pre-trained model
       pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_deepseg.h5"
       modelPath = get_file(pretrainedURL.split("/")[-1], pretrainedURL,
-                  file_hash="6ef61c84b7506f783ae9b7deaa7d1294ca1944b8d5e9ca3e20af700dbe13b537",
-                  hash_algorithm="sha256")
+                           file_hash="6ef61c84b7506f783ae9b7deaa7d1294ca1944b8d5e9ca3e20af700dbe13b537",
+                           hash_algorithm="sha256")
 
       """ # Model 1: DeepSeg model
       # trained_model = DeepSegLib.models.get_deepSeg(input_shape=config["input_shape"])
       trained_model = DeepSegLib.models.get_deepSeg(input_shape=(192, 224, 160, 1))
-
       # load weights of the pre-trained model
       pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_deepseg.h5"
       modelPath = get_file(pretrainedURL.split("/")[-1], pretrainedURL,
                   file_hash="337b87b98a97a05fe06098ae5ab271d01aef6312dce9890217c37d5f5229ef96",
                   hash_algorithm="sha256")
-
-
       # Model 2: nnU-Net model
       trained_model = DeepSegLib.models.get_nnUNet(input_shape=config["input_shape"])
-
       # load weights of the pre-trained model
       pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_nnunet.h5"
       modelPath = get_file(pretrainedURL.split("/")[-1], pretrainedURL,
                   file_hash="ed96275522fe21d97c52e57bd625b8a686b95fd199aa98874ce0ad054a501203",
                   hash_algorithm="sha256")
-
       # Model 3: nnU-Net model (8 base_filters)
       trained_model = DeepSegLib.models.get_nnUNet(input_shape=config["input_shape"])
-
       # load weights of the pre-trained model
       pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_nnunet_2.h5"
       modelPath = get_file(pretrainedURL.split("/")[-1], pretrainedURL,
                   file_hash="6522c8e8f1e81f2173b3c40559a3679e20720d00ac87ab61aa33033fb616ac76",
                   hash_algorithm="sha256")
-
       # Model 4: residual U-Net model
       trained_model = DeepSegLib.models.get_model(input_shape=config["input_shape"])
-
       # load weights of the pre-trained model
       pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model-238.h5"
       modelPath = get_file(pretrainedURL.split("/")[-1], pretrainedURL,
                   file_hash="b12111e871aa04436f2e19e79d24a77c39c22d301d651be842cd711d1ac391b8",
                   hash_algorithm="sha256")"""
 
-      trained_model.load_weights(modelPath)#, by_name=True) 
+      trained_model.load_weights(modelPath)  # , by_name=True)
       stopTime = time.time()
-      logging.info('Getting pre-trained model completed in {0:.2f} seconds'.format(stopTime-startTime))
+      logging.info('Getting pre-trained model completed in {0:.2f} seconds'.format(stopTime - startTime))
       startTime = time.time()
 
       # predict the tumor boundries
-      tumor_pred = DeepSegLib.predict.predict_segmentations(trained_model, img_preprocess, 
-                  tumor_type = config['tumor_type'], output_shape=(img1.shape[0], img1.shape[1], img1.shape[2]))
+      tumor_pred = DeepSegLib.predict.predict_segmentations(trained_model, img_preprocess,
+                                                            tumor_type=config['tumor_type'],
+                                                            output_shape=(img1.shape[0], img1.shape[1], img1.shape[2]))
 
       # casting to unsigned int and reshape
       tumor_pred = np.array(tumor_pred).astype(np.uintc)
       tumor_pred = np.swapaxes(tumor_pred, 0, 2)
-      
+
       stopTime = time.time()
-      logging.info('Prediction completed in {0:.2f} seconds'.format(stopTime-startTime))
+      logging.info('Prediction completed in {0:.2f} seconds'.format(stopTime - startTime))
       startTime = time.time()
 
       slicer.util.updateVolumeFromArray(segVolumeNode, tumor_pred)
-
 
       # fix the orientation problem
       segVolumeNode.SetOrigin(inputVolume1.GetOrigin())
@@ -588,14 +616,15 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
       # change the tumor colo space
       displayNode = segVolumeNode.GetDisplayNode()
-      displayNode.SetAndObserveColorNodeID('vtkMRMLColorTableNodeLabels') #vtkMRMLColorTableNodeRainbow
+      displayNode.SetAndObserveColorNodeID('vtkMRMLColorTableNodeLabels')  # vtkMRMLColorTableNodeRainbow
 
       stopTime = time.time()
-      logging.info('Visualization completed in {0:.2f} seconds'.format(stopTime-startTime))
+      logging.info('Visualization completed in {0:.2f} seconds'.format(stopTime - startTime))
       #######################################################################
 
     except Exception as e:
-      slicer.util.errorDisplay("Failed to compute results: "+str(e))
+      slicer.util.errorDisplay("Failed to compute results: " + str(e))
+      self.currentStatusLabel.text = "Exception"
       import traceback
       traceback.print_exc()
 
@@ -630,18 +659,18 @@ class DeepSegLogic(ScriptedLoadableModuleLogic):
       parameterNode.SetParameter("Invert", "false")
 
   ####################### add your functions here #######################
-  def norm_image(self, img, norm_type = "norm"):
-    if norm_type == "standard_norm": # standarization, same dataset
-        img_mean = img.mean()
-        img_std = img.std()
-        img_std = 1 if img.std()==0 else img.std()
-        img = (img - img_mean) / img_std
-    elif norm_type == "norm": # different datasets
-        img = (img - np.min(img))/(np.ptp(img)) # (np.max(img) - np.min(img))
-    elif norm_type == "norm_slow": # different datasets
-#         img = (img - np.min(img))/(np.max(img) - np.min(img))
-        img_ptp = 1 if np.ptp(img)== 0 else np.ptp(img) 
-        img = (img - np.min(img))/img_ptp
+  def norm_image(self, img, norm_type="norm"):
+    if norm_type == "standard_norm":  # standarization, same dataset
+      img_mean = img.mean()
+      img_std = img.std()
+      img_std = 1 if img.std() == 0 else img.std()
+      img = (img - img_mean) / img_std
+    elif norm_type == "norm":  # different datasets
+      img = (img - np.min(img)) / (np.ptp(img))  # (np.max(img) - np.min(img))
+    elif norm_type == "norm_slow":  # different datasets
+      #         img = (img - np.min(img))/(np.max(img) - np.min(img))
+      img_ptp = 1 if np.ptp(img) == 0 else np.ptp(img)
+      img = (img - np.min(img)) / img_ptp
 
     return img
 
@@ -649,15 +678,15 @@ class DeepSegLogic(ScriptedLoadableModuleLogic):
     # manual cropping to config["image_shape"] = (160, 224, 192)
     input_shape = np.array(img.shape)
     # center the cropped image
-    offset = np.array((input_shape - output_shape)/2).astype(np.int)
-    offset[offset<0] = 0
+    offset = np.array((input_shape - output_shape) / 2).astype(np.int)
+    offset[offset < 0] = 0
     x, y, z = offset
-    crop_img = img[x:x+output_shape[0], y:y+output_shape[1], z:z+output_shape[2]]
+    crop_img = img[x:x + output_shape[0], y:y + output_shape[1], z:z + output_shape[2]]
 
     # pad the preprocessed image
     padded_img = np.zeros(output_shape)
-    x, y, z = np.array((output_shape - np.array(crop_img.shape))/2).astype(np.int)
-    padded_img[x:x+crop_img.shape[0],y:y+crop_img.shape[1],z:z+crop_img.shape[2]] = crop_img
+    x, y, z = np.array((output_shape - np.array(crop_img.shape)) / 2).astype(np.int)
+    padded_img[x:x + crop_img.shape[0], y:y + crop_img.shape[1], z:z + crop_img.shape[2]] = crop_img
 
     return padded_img
 
@@ -665,11 +694,12 @@ class DeepSegLogic(ScriptedLoadableModuleLogic):
     # TODO: automatic cropping using img[~np.all(img == 0, axis=1)]
     img_preprocess = np.zeros(dim)
     for i in range(dim[-1]):
-      img_preprocess[:,:,:,i] = self.crop_image(imgs[:,:,:,i])
-      img_preprocess[:,:,:,i] = self.norm_image(img_preprocess[:,:,:,i])
+      img_preprocess[:, :, :, i] = self.crop_image(imgs[:, :, :, i])
+      img_preprocess[:, :, :, i] = self.norm_image(img_preprocess[:, :, :, i])
 
     return img_preprocess
   #######################################################################
+
 
 #
 # DeepSegTest
