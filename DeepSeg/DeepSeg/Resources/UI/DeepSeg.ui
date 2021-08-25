@@ -205,43 +205,6 @@
       <bool>false</bool>
      </property>
      <layout class="QGridLayout" name="AdvancedParametersLayout">
-      <item row="2" column="0">
-       <widget class="QLabel" name="imageShapeLabel">
-        <property name="text">
-         <string>Input Image Shape</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="1">
-       <widget class="QComboBox" name="imageShapeSelector">
-        <item>
-         <property name="text">
-          <string>(240, 240, 155)</string>
-         </property>
-        </item>
-       </widget>
-      </item>
-      <item row="5" column="0">
-       <widget class="QPushButton" name="show3DButton">
-        <property name="text">
-         <string>Show 3D</string>
-        </property>
-        <property name="icon">
-         <iconset>
-          <normaloff>../Icons/3d-cube.png</normaloff>../Icons/3d-cube.png</iconset>
-        </property>
-        <property name="checkable">
-         <bool>false</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="0">
-       <widget class="QLabel" name="backgroundLabel">
-        <property name="text">
-         <string>3D Background Colour</string>
-        </property>
-       </widget>
-      </item>
       <item row="5" column="1">
        <widget class="QPushButton" name="editSegButton">
         <property name="text">
@@ -251,6 +214,30 @@
          <iconset>
           <normaloff>../Icons/next.png</normaloff>../Icons/next.png</iconset>
         </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="modalityLabel">
+        <property name="text">
+         <string>Image Modalities</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QComboBox" name="modalitySelector">
+        <property name="autoFillBackground">
+         <bool>false</bool>
+        </property>
+        <item>
+         <property name="text">
+          <string>FLAIR</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>FLAIR, T1, T1ce, T2</string>
+         </property>
+        </item>
        </widget>
       </item>
       <item row="4" column="1">
@@ -272,34 +259,17 @@
         </item>
        </widget>
       </item>
-      <item row="3" column="0">
-       <widget class="QLabel" name="tumourTypeLabel">
+      <item row="2" column="0">
+       <widget class="QLabel" name="imageShapeLabel">
         <property name="text">
-         <string>Tumour Type</string>
+         <string>Input Image Shape</string>
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
-       <widget class="QComboBox" name="modalitySelector">
-        <property name="autoFillBackground">
-         <bool>false</bool>
-        </property>
-        <item>
-         <property name="text">
-          <string>FLAIR</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>FLAIR, T1, T1ce, T2</string>
-         </property>
-        </item>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="modalityLabel">
+      <item row="4" column="0">
+       <widget class="QLabel" name="backgroundLabel">
         <property name="text">
-         <string>Image Modalities</string>
+         <string>3D Background Colour</string>
         </property>
        </widget>
       </item>
@@ -326,6 +296,44 @@
          </property>
         </item>
        </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="tumourTypeLabel">
+        <property name="text">
+         <string>Tumour Type</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QPushButton" name="show3DButton">
+        <property name="text">
+         <string>Show 3D</string>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>../Icons/3d-cube.png</normaloff>../Icons/3d-cube.png</iconset>
+        </property>
+        <property name="checkable">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QComboBox" name="imageShapeSelector">
+        <item>
+         <property name="text">
+          <string>(240, 240, 155)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>(192, 224, 160)</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="7" column="0">
+       <layout class="QGridLayout" name="gridLayout"/>
       </item>
      </layout>
     </widget>

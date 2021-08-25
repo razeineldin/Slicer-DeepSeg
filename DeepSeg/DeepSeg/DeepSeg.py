@@ -191,16 +191,16 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     self.applyButton = qt.QPushButton("Apply")
     self.applyButton.toolTip = "Run the algorithm."
-    self.applyButton.enabled = True
+    self.applyButton.enabled = False
 
     hlayout = qt.QHBoxLayout()
-
     hlayout.addWidget(self.restoreDefaultsButton)
     hlayout.addStretch(1)
     hlayout.addWidget(self.cancelButton)
     hlayout.addWidget(self.applyButton)
     self.layout.addLayout(hlayout)
 
+    self.onBackgroundSelector()
 
     # Connections
 
@@ -219,10 +219,6 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.ui.outputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
 
     # Advanced parameters
-    #self.ui.modalitySelector.currentIndexChanged.connect(self.updateParameterNodeFromGUI)
-    #self.ui.imageShapeSelector.currentIndexChanged.connect(self.updateParameterNodeFromGUI)
-    #self.ui.tumourTypeSelector.currentIndexChanged.connect(self.updateParameterNodeFromGUI)
-
     self.ui.modalitySelector.currentIndexChanged.connect(self.onModalitySelector)
     self.ui.imageShapeSelector.currentIndexChanged.connect(self.onImageShapeSelector)
     self.ui.tumourTypeSelector.currentIndexChanged.connect(self.onTumourTypeSelector)
@@ -235,6 +231,7 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.restoreDefaultsButton.connect("clicked(bool)", self.onRestoreDefaultsButton)
     self.cancelButton.connect("clicked(bool)", self.onCancelButton)
     self.applyButton.connect("clicked(bool)", self.onApplyButton)
+
 
     #########################################################################
 
@@ -335,41 +332,38 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     # Update buttons states and tooltips
 
-    # show 3D Button
-    if self._parameterNode.GetNodeReference("OutputVolume"):
+
+    if self._parameterNode.GetNodeReference("InputVolume1") and self._parameterNode.GetNodeReference("OutputVolume"):
+      # show 3D Button
       self.ui.show3DButton.toolTip = "Create 3D Model"
       self.ui.show3DButton.enabled = True
-    else:
-      self.ui.show3DButton.toolTip = "Apply the algorithm first!"
-      self.ui.show3DButton.enabled = False
-
-    # edit seg Button
-    if self._parameterNode.GetNodeReference("OutputVolume"):
+      # edit seg Button
       self.ui.editSegButton.toolTip = "Switch to Segment Editor"
       self.ui.editSegButton.enabled = True
+      # Cancel Button
+      self.cancelButton.toolTip = "Cancel the execution of the module"
+      self.cancelButton.enabled = True
+      # apply Button
+      self.applyButton.toolTip = "Compute output segmentation"
+      self.applyButton.enabled = True
+
     else:
+      # show 3D Button
+      self.ui.show3DButton.toolTip = "Apply the algorithm first!"
+      self.ui.show3DButton.enabled = False
+      # edit seg Button
       self.ui.editSegButton.toolTip = "Apply the algorithm first!"
       self.ui.editSegButton.enabled = False
+      # Cancel Button
+      self.cancelButton.toolTip = "Cancel the execution of the module"
+      self.cancelButton.enabled = False
+      # apply Button
+      self.applyButton.toolTip = "Select input and output volume nodes"
+      self.applyButton.enabled = False
 
     # restore defaults Button
     self.restoreDefaultsButton.toolTip = "Reset parameters to default"
     self.restoreDefaultsButton.enabled = True
-
-    # TODO: Cancel Button
-    if self._parameterNode.GetNodeReference("InputVolume1") and self._parameterNode.GetNodeReference("OutputVolume"):
-      self.cancelButton.toolTip = "Cancel the execution of the module"
-      self.cancelButton.enabled = True
-    else:
-      self.cancelButton.toolTip = "Cancel the execution of the module"
-      self.cancelButton.enabled = False
-
-    # apply Button
-    if self._parameterNode.GetNodeReference("InputVolume1") and self._parameterNode.GetNodeReference("OutputVolume"):
-      self.applyButton.toolTip = "Compute output segmentation"
-      self.applyButton.enabled = True
-    else:
-      self.applyButton.toolTip = "Select input and output volume nodes"
-      self.applyButton.enabled = False
 
     #####################################################################################
 
@@ -398,7 +392,6 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     self._parameterNode.EndModify(wasModified)
 
-  # TODO: Modality Selector
   def onModalitySelector(self):
     modality = self.ui.modalitySelector.currentIndex
     print("modality:", modality)
@@ -409,19 +402,19 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self._parameterNode.SetParameter("images_num", "4")
 
     ### debugging
-    print("Updated images_num:", self._parameterNode.GetParameter("images_num"))
-    print("Updated image_shape:", (self._parameterNode.GetParameter("image_shape").strip(")(").split(", ")))
-    print("Updated image_shape[0]:", (self._parameterNode.GetParameter("image_shape").strip(")(").split(", "))[0])
-    print("Updated tumor_type:", self._parameterNode.GetParameter("tumor_type"))
+    #print("Updated images_num:", self._parameterNode.GetParameter("images_num"))
+    #print("Updated image_shape:", (self._parameterNode.GetParameter("image_shape").strip(")(").split(", ")))
+    #print("Updated image_shape[0]:", (self._parameterNode.GetParameter("image_shape").strip(")(").split(", "))[0])
+    #print("Updated tumor_type:", self._parameterNode.GetParameter("tumor_type"))
 
-  # TODO: Image Shape
   def onImageShapeSelector(self):
     imageShape = self.ui.imageShapeSelector.currentIndex
 
     if imageShape == 0: # 240,240,155
       self._parameterNode.SetParameter("image_shape", "(240, 240, 155)")
+    elif imageShape == 1: # 190,224,160
+      self._parameterNode.SetParameter("image_shape", "(190, 224, 160)")
 
-  # TODO: Tumour Type
   def onTumourTypeSelector(self):
     tumourType = self.ui.modalitySelector.currentIndex
 
@@ -434,7 +427,6 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     elif tumourType == 3:
       self._parameterNode.SetParameter("tumor_type", "all")
 
-  # TODO: Background Colour
   def onBackgroundSelector(self):
     renderWindow = slicer.app.layoutManager().threeDWidget(0).threeDView().renderWindow()
     renderer = renderWindow.GetRenderers().GetFirstRenderer()
@@ -517,12 +509,10 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     threeDView = threeDWidget.threeDView()
     threeDView.resetFocalPoint()
 
-
   def onEditSegButton(self):
     # switch to Segment Editor in order to edit the segments manually
     slicer.util.selectModule("SegmentEditor")
 
-  # TODO: Restore Defaults
   def onRestoreDefaultsButton(self):
     logging.info("TODO")
 
@@ -537,9 +527,13 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self._parameterNode.SetNodeReferenceID("InputVolume4", None)
     self._parameterNode.SetNodeReferenceID("OutputVolume", None)
 
-    slicer.util.resetSliceViews() # Reset field of view to show background volume maximized
+    # Advanced parameters
+    self.ui.modalitySelector.setCurrentIndex(0)
+    self.ui.imageShapeSelector.setCurrentIndex(0)
+    self.ui.tumourTypeSelector.setCurrentIndex(0)
+    self.ui.backgroundSelector.setCurrentIndex(0)
 
-    # TODO: add advanced parameters
+    slicer.util.resetSliceViews() # Reset field of view to show background volume maximized
 
   # TODO: Cancel
   def onCancelButton(self):
@@ -718,38 +712,9 @@ class DeepSegLogic(ScriptedLoadableModuleLogic):
       #images_list = ["case_flair.nii.gz"]
       parameterNode.SetParameter("images_num", str(1))
     if not parameterNode.GetParameter("image_shape"):
-      #parameterNode.SetParameter("image_shape", np.array((192, 224, 160)))
-      parameterNode.SetParameter("image_shape", "(192, 224, 160)") # 240, 240, 155
-
-
-    #if not parameterNode.GetParameter("input_shape"):
-    #  dims = (parameterNode.GetParameter("image_shape")[0], parameterNode.GetParameter("image_shape")[1], parameterNode.GetParameter("image_shape")[2])
-    #  parameterNode.SetParameter("input_shape", (dims[0], dims[1], dims[2], len(parameterNode.GetParameter("images"))))
+      parameterNode.SetParameter("image_shape", "(240, 240, 155)") # 192, 224, 160
     if not parameterNode.GetParameter("tumor_type"):
       parameterNode.SetParameter("tumor_type", "whole") # all, whole, core, enhancing
-
-    print("Default tumor_type:", parameterNode.GetParameter("tumor_type"))
-    print("Defaut image_shape:", (parameterNode.GetParameter("image_shape").strip(")(").split(", ")))
-    print("Defaut image_shape[0]:", (parameterNode.GetParameter("image_shape").strip(")(").split(", "))[0])
-    print("Default images_num:", parameterNode.GetParameter("images_num"))
-
-    #print(self._parameterNode.GetNodeReference("InputVolume1"))
-
-    """
-
-#config["image_shape"] = (192, 224, 160) # the input to the pre-trained model
-
-config["images"] = ["BraTS20_sample_case_flair.nii.gz", "BraTS20_sample_case_t1.nii.gz", 
-                     "BraTS20_sample_case_t1ce.nii.gz", "BraTS20_sample_case_t2.nii.gz"]
-
-# model parameters
-config["input_shape"] = (config["image_shape"][0], config["image_shape"][1], 
-                         config["image_shape"][2], len(config["images"]))
-config["input_shape"] = (192, 224, 160, 1)
-
-config["tumor_type"] = "all" # "all", "whole", "core", "enhancing"
-    """
-
 
   ####################### add your functions here #######################
   def norm_image(self, img, norm_type = "norm"):
