@@ -18,7 +18,7 @@
      </property>
      <layout class="QFormLayout" name="formLayout_2">
       <item row="0" column="0">
-       <widget class="QLabel" name="inputLabel1">
+       <widget class="QLabel" name="inputMRILabel1">
         <property name="text">
          <string>MRI FLAIR Volume:</string>
         </property>
@@ -46,7 +46,7 @@
        </widget>
       </item>
       <item row="2" column="0">
-       <widget class="QLabel" name="inputLabel2">
+       <widget class="QLabel" name="inputMRILabel2">
         <property name="text">
          <string>MRI T1 Volume:</string>
         </property>
@@ -77,7 +77,7 @@
        </widget>
       </item>
       <item row="4" column="0">
-       <widget class="QLabel" name="inputLabel3">
+       <widget class="QLabel" name="inputMRILabel3">
         <property name="text">
          <string>MRI T1ce Volume:</string>
         </property>
@@ -108,7 +108,7 @@
        </widget>
       </item>
       <item row="6" column="0">
-       <widget class="QLabel" name="inputLabel4">
+       <widget class="QLabel" name="inputMRILabel4">
         <property name="text">
          <string>MRI T2 Volume:</string>
         </property>
@@ -148,7 +148,7 @@
      </property>
      <layout class="QFormLayout" name="formLayout_4">
       <item row="0" column="0">
-       <widget class="QLabel" name="label_2">
+       <widget class="QLabel" name="outputLabel">
         <property name="text">
          <string>Tumour Volume:</string>
         </property>
@@ -204,19 +204,107 @@
      <property name="collapsed">
       <bool>false</bool>
      </property>
-     <layout class="QGridLayout" name="tumourTypeSelector">
-      <item row="4" column="1">
-       <widget class="ctkColorPickerButton" name="ColorPickerButton"/>
+     <layout class="QGridLayout" name="AdvancedParametersLayout">
+      <item row="2" column="0">
+       <widget class="QLabel" name="imageShapeLabel">
+        <property name="text">
+         <string>Input Image Shape</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QComboBox" name="imageShapeSelector">
+        <item>
+         <property name="text">
+          <string>(240, 240, 155)</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QPushButton" name="show3DButton">
+        <property name="text">
+         <string>Show 3D</string>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>../Icons/3d-cube.png</normaloff>../Icons/3d-cube.png</iconset>
+        </property>
+        <property name="checkable">
+         <bool>false</bool>
+        </property>
+       </widget>
       </item>
       <item row="4" column="0">
-       <widget class="QLabel" name="label_4">
+       <widget class="QLabel" name="backgroundLabel">
         <property name="text">
          <string>3D Background Colour</string>
         </property>
        </widget>
       </item>
+      <item row="5" column="1">
+       <widget class="QPushButton" name="editSegButton">
+        <property name="text">
+         <string>Edit Segmentation</string>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>../Icons/next.png</normaloff>../Icons/next.png</iconset>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QComboBox" name="backgroundSelector">
+        <item>
+         <property name="text">
+          <string>Black</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>White</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Light blue</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="tumourTypeLabel">
+        <property name="text">
+         <string>Tumour Type</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QComboBox" name="modalitySelector">
+        <property name="autoFillBackground">
+         <bool>false</bool>
+        </property>
+        <item>
+         <property name="text">
+          <string>FLAIR</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>FLAIR, T1, T1ce, T2</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="modalityLabel">
+        <property name="text">
+         <string>Image Modalities</string>
+        </property>
+       </widget>
+      </item>
       <item row="3" column="1">
-       <widget class="QComboBox" name="comboBox_3">
+       <widget class="QComboBox" name="tumourTypeSelector">
         <item>
          <property name="text">
           <string>Whole Tumour</string>
@@ -239,92 +327,7 @@
         </item>
        </widget>
       </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="inputImageShapeSelector">
-        <property name="text">
-         <string>Input Image Shape</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QComboBox" name="backgroundColourButton">
-        <property name="autoFillBackground">
-         <bool>false</bool>
-        </property>
-        <item>
-         <property name="text">
-          <string>FLAIR</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>FLAIR, T1, T1ce, T2</string>
-         </property>
-        </item>
-       </widget>
-      </item>
-      <item row="3" column="0">
-       <widget class="QLabel" name="label_5">
-        <property name="text">
-         <string>Tumour Type</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="modalitySelector">
-        <property name="text">
-         <string>Image Modalities</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="1">
-       <widget class="QComboBox" name="comboBox_2">
-        <item>
-         <property name="text">
-          <string>(240, 240, 155)</string>
-         </property>
-        </item>
-       </widget>
-      </item>
-      <item row="5" column="0">
-       <widget class="QPushButton" name="show3DButton">
-        <property name="text">
-         <string>Show 3D</string>
-        </property>
-        <property name="icon">
-         <iconset>
-          <normaloff>../Icons/3d-cube.png</normaloff>../Icons/3d-cube.png</iconset>
-        </property>
-        <property name="checkable">
-         <bool>false</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="5" column="1">
-       <widget class="QPushButton" name="editSegButton">
-        <property name="text">
-         <string>Edit Segmentation</string>
-        </property>
-        <property name="icon">
-         <iconset>
-          <normaloff>../Icons/next.png</normaloff>../Icons/next.png</iconset>
-        </property>
-       </widget>
-      </item>
      </layout>
-    </widget>
-   </item>
-   <item>
-    <widget class="QPushButton" name="applyButton">
-     <property name="enabled">
-      <bool>false</bool>
-     </property>
-     <property name="toolTip">
-      <string>Run the algorithm.</string>
-     </property>
-     <property name="text">
-      <string>Apply</string>
-     </property>
     </widget>
    </item>
    <item>
@@ -348,11 +351,6 @@
    <extends>QWidget</extends>
    <header>ctkCollapsibleButton.h</header>
    <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>ctkColorPickerButton</class>
-   <extends>QPushButton</extends>
-   <header>ctkColorPickerButton.h</header>
   </customwidget>
   <customwidget>
    <class>qMRMLNodeComboBox</class>
