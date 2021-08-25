@@ -31,6 +31,7 @@ except:
   from nilearn.image import crop_img as crop_image
 
 import sys
+import time
 sys.argv = ["pdm"]
 import tensorflow.python
 
@@ -60,7 +61,6 @@ from DeepSegLib.predict import *
 import DeepSegLib
 #from DeepSegLib import *
 
-import os
 # Tensorflow 2.XX\n",
 if float(tf.__version__[:3]) >= 2.0:
   os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -200,7 +200,7 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     hlayout.addWidget(self.applyButton)
     self.layout.addLayout(hlayout)
 
-    self.onBackgroundSelector()
+    self.onBackgroundSelector() # Change 3D View Background
 
     # Connections
 
@@ -231,7 +231,6 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.restoreDefaultsButton.connect("clicked(bool)", self.onRestoreDefaultsButton)
     self.cancelButton.connect("clicked(bool)", self.onCancelButton)
     self.applyButton.connect("clicked(bool)", self.onApplyButton)
-
 
     #########################################################################
 
@@ -394,7 +393,7 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
   def onModalitySelector(self):
     modality = self.ui.modalitySelector.currentIndex
-    print("modality:", modality)
+    #print("modality:", modality)
 
     if modality == 0: # FLAIR
       self._parameterNode.SetParameter("images_num", "1")
@@ -510,11 +509,13 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     threeDView.resetFocalPoint()
 
   def onEditSegButton(self):
+    logging.info("Switching to Segment Editor")
+
     # switch to Segment Editor in order to edit the segments manually
     slicer.util.selectModule("SegmentEditor")
 
   def onRestoreDefaultsButton(self):
-    logging.info("TODO")
+    logging.info("Restoring Defaults")
 
     if not self._parameterNode.GetNodeReference("InputVolume1"):
       firstVolumeNode = slicer.mrmlScene.GetFirstNodeByClass("vtkMRMLScalarVolumeNode") # vtkMRMLSegmentationNode
@@ -549,10 +550,19 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     try:
       ####################### add your main code here #######################
+
+      #print("Updated images_num:", self._parameterNode.GetParameter("images_num"))
+      #print("Updated image_shape:", (self._parameterNode.GetParameter("image_shape").strip(")(").split(", ")))
+      #print("Updated image_shape[0]:", (self._parameterNode.GetParameter("image_shape").strip(")(").split(", "))[0])
+      #print("Updated tumor_type:", self._parameterNode.GetParameter("tumor_type"))
+
+
       # Compute output
-      import time
       startTime = time.time()
-      logging.info("Processing started")
+      logging.info("Pre-processing")
+      self.currentStatusLabel.text = "Pre-processing"
+      self.progress.setValue(0)
+      self.progress.show()
 
       inputVolume1 = self.ui.FLAIRSelector.currentNode()
       inputVolume2 = self.ui.T1Selector.currentNode()
@@ -585,10 +595,11 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       #slicer.util.updateVolumeFromArray(segVolumeNode, img_preprocess1)
       stopTime = time.time()
       logging.info("Pre-processing data completed in {0:.2f} seconds".format(stopTime-startTime))
+      self.progress.setValue(100)
       startTime = time.time()
 
       # predict tumor boundaries
-
+      self.currentStatusLabel.text = "Downloading pre-trained model"
       # Model 1: DeepSeg model
       trained_model = DeepSegLib.models.get_deepSeg(input_shape=config["input_shape"])
 
@@ -639,9 +650,11 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       trained_model.load_weights(modelPath)#, by_name=True) 
       stopTime = time.time()
       logging.info("Getting pre-trained model completed in {0:.2f} seconds".format(stopTime-startTime))
+      self.progress.setValue(300)
       startTime = time.time()
 
       # predict the tumor boundries
+      self.currentStatusLabel.text = "Predicting tumor segmentation"
       tumor_pred = DeepSegLib.predict.predict_segmentations(trained_model, img_preprocess, 
                   tumor_type = config["tumor_type"], output_shape=(img1.shape[0], img1.shape[1], img1.shape[2]))
 
@@ -651,6 +664,7 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       
       stopTime = time.time()
       logging.info("Prediction completed in {0:.2f} seconds".format(stopTime-startTime))
+      self.progress.setValue(900)
       startTime = time.time()
 
       slicer.util.updateVolumeFromArray(segVolumeNode, tumor_pred)
@@ -674,13 +688,15 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
       stopTime = time.time()
       logging.info("Visualization completed in {0:.2f} seconds".format(stopTime-startTime))
+      self.currentStatusLabel.text = "Completed"
+      self.progress.setValue(1000)
       #######################################################################
 
     except Exception as e:
+      self.currentStatusLabel.text = "Exception"
       slicer.util.errorDisplay("Failed to compute results: "+str(e))
       import traceback
       traceback.print_exc()
-
 
 #
 # DeepSegLogic
