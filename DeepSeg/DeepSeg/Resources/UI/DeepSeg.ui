@@ -322,18 +322,15 @@
        <widget class="QComboBox" name="imageShapeSelector">
         <item>
          <property name="text">
-          <string>(240, 240, 155)</string>
+          <string>(192, 224, 160)</string>
          </property>
         </item>
         <item>
          <property name="text">
-          <string>(192, 224, 160)</string>
+          <string>(240, 240, 155)</string>
          </property>
         </item>
        </widget>
-      </item>
-      <item row="7" column="0">
-       <layout class="QGridLayout" name="gridLayout"/>
       </item>
      </layout>
     </widget>

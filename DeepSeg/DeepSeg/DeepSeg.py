@@ -79,24 +79,6 @@ ICON_DIR = os.path.dirname(os.path.realpath(__file__)) + "/Resources/Icons/"
 
 #####################################################################
 
-####################### add your variables here #######################
-config = dict()
-
-# define input
-config["image_shape"] = (192, 224, 160) # the input to the pre-trained model
-
-config["images"] = ["BraTS20_sample_case_flair.nii.gz", "BraTS20_sample_case_t1.nii.gz", 
-                     "BraTS20_sample_case_t1ce.nii.gz", "BraTS20_sample_case_t2.nii.gz"]
-
-# model parameters
-config["input_shape"] = (config["image_shape"][0], config["image_shape"][1], 
-                         config["image_shape"][2], len(config["images"]))
-config["input_shape"] = (192, 224, 160, 4)
-
-config["tumor_type"] = "all" # "all", "whole", "core", "enhancing"
-
-
-#######################################################################
 
 #
 # DeepSeg
@@ -401,22 +383,16 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     elif modality == 1: # FLAIR, T1, T1ce, T2
       self._parameterNode.SetParameter("images_num", "4")
 
-    ### debugging
-    #print("Updated images_num:", self._parameterNode.GetParameter("images_num"))
-    #print("Updated image_shape:", (self._parameterNode.GetParameter("image_shape").strip(")(").split(", ")))
-    #print("Updated image_shape[0]:", (self._parameterNode.GetParameter("image_shape").strip(")(").split(", "))[0])
-    #print("Updated tumor_type:", self._parameterNode.GetParameter("tumor_type"))
-
   def onImageShapeSelector(self):
     imageShape = self.ui.imageShapeSelector.currentIndex
 
     if imageShape == 0: # 240,240,155
       self._parameterNode.SetParameter("image_shape", "(240, 240, 155)")
-    elif imageShape == 1: # 190,224,160
-      self._parameterNode.SetParameter("image_shape", "(190, 224, 160)")
+    elif imageShape == 1: # 192,224,160
+      self._parameterNode.SetParameter("image_shape", "(192, 224, 160)")
 
   def onTumourTypeSelector(self):
-    tumourType = self.ui.modalitySelector.currentIndex
+    tumourType = self.ui.tumourTypeSelector.currentIndex
 
     if tumourType == 0:
       self._parameterNode.SetParameter("tumor_type", "whole")
@@ -432,8 +408,8 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     backgroundColor = self.ui.backgroundSelector.currentIndex
 
     if backgroundColor == 0: # black
-      viewNode.SetBackgroundColor(0,0,0)
-      viewNode.SetBackgroundColor2(0,0,0)
+      viewNode.SetBackgroundColor(0, 0, 0)
+      viewNode.SetBackgroundColor2(0, 0, 0)
     elif backgroundColor == 1: # white
       viewNode.SetBackgroundColor(1, 1, 1)
       viewNode.SetBackgroundColor2(1, 1, 1)
@@ -549,13 +525,6 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     try:
       ####################### add your main code here #######################
-
-      #print("Updated images_num:", self._parameterNode.GetParameter("images_num"))
-      #print("Updated image_shape:", (self._parameterNode.GetParameter("image_shape").strip(")(").split(", ")))
-      #print("Updated image_shape[0]:", (self._parameterNode.GetParameter("image_shape").strip(")(").split(", "))[0])
-      #print("Updated tumor_type:", self._parameterNode.GetParameter("tumor_type"))
-
-
       # Compute output
       startTime = time.time()
       logging.info("Pre-processing")
@@ -569,23 +538,23 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       inputVolume4 = self.ui.T2Selector.currentNode()
       segVolumeNode = self.ui.outputSelector.currentNode()
 
-      modality_n = int(self._parameterNode.GetParameter("images_num"))
-      if modality_n ==1: # DeepSeg
-        config["input_shape"] = (192, 224, 160, 1)
-        img1 = slicer.util.arrayFromVolume(inputVolume1)[..., np.newaxis]
+      # model variables
+      modalityNum = int(self._parameterNode.GetParameter("images_num"))
+      imageShape = np.asarray(self._parameterNode.GetParameter("image_shape").strip(")(").split(", "))
+      tumorType = self._parameterNode.GetParameter("tumor_type")
+      inputShape = (int(imageShape[0]), int(imageShape[1]), int(imageShape[2]), modalityNum)
 
+      ### debuging ###
+      #print("imageShape:", imageShape, "\ntumorType:", tumorType, "\ninputShape:", inputShape, "\nmodalityNum:", modalityNum)
+      #return 0
+
+      if modalityNum ==1: # DeepSeg
+        img1 = slicer.util.arrayFromVolume(inputVolume1)
+        imgs = img1[..., np.newaxis]
         # fix the data structure of nrrd (x,y,z) and numpy (z,y,x)
-        img1 = np.swapaxes(img1, 0, 2)
-
-        stopTime = time.time()
-        logging.info("Loadind data completed in {0:.2f} seconds".format(stopTime-startTime))
-        startTime = time.time()
-
-        # preprocess image(s)
-        img_preprocess = self.logic.preprocess_images(img1, dim=config["input_shape"])
+        imgs = np.swapaxes(imgs, 0, 2)
 
       else: # 4 modalities (nnUNet)
-        config["input_shape"] = (192, 224, 160, 4)
         # get the numpy array(s)
         img1 = slicer.util.arrayFromVolume(inputVolume1)
         img2 = slicer.util.arrayFromVolume(inputVolume2)
@@ -596,14 +565,15 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         # fix the data structure of nrrd (x,y,z) and numpy (z,y,x)
         imgs = np.swapaxes(imgs, 0, 2)
 
-        stopTime = time.time()
-        logging.info("Loadind data completed in {0:.2f} seconds".format(stopTime-startTime))
-        startTime = time.time()
+      stopTime = time.time()
+      logging.info("Loadind data completed in {0:.2f} seconds".format(stopTime-startTime))
+      startTime = time.time()
 
-        # preprocess image(s)
-        img_preprocess = self.logic.preprocess_images(imgs, dim=config["input_shape"])
+      # preprocess image(s)
+      img_preprocess = self.logic.preprocess_images(imgs, dim=inputShape)
 
-      print("img_preprocess:", img_preprocess.shape)
+      ### debuging ###
+      #print("img_preprocess:", img_preprocess.shape)
       #print("img_preprocess 0:", img_preprocess[:,:,:,0].shape)
       #img_preprocess1 = np.swapaxes(img_preprocess[:,:,:,0], 0, 2)
       #slicer.util.updateVolumeFromArray(segVolumeNode, img_preprocess1)
@@ -616,9 +586,10 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.currentStatusLabel.text = "Downloading pre-trained model"
 
 
-      if modality_n ==1: # DeepSeg
-      # Model 1: DeepSeg model
-        trained_model = DeepSegLib.models.get_deepSeg(input_shape=config["input_shape"])
+      if modalityNum == 1: # DeepSeg
+        # Model 1: DeepSeg model
+        logging.info("Getting DeepSeg Model")
+        trained_model = DeepSegLib.models.get_deepSeg(input_shape=inputShape)
 
         # load weights of the pre-trained model
         pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_deepseg.h5"
@@ -626,11 +597,12 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
                     file_hash="6ef61c84b7506f783ae9b7deaa7d1294ca1944b8d5e9ca3e20af700dbe13b537",
                     hash_algorithm="sha256")
 
-        output_shape=(img1.shape[0], img1.shape[1], img1.shape[2])
+        #output_shape=(imgs.shape[0], imgs.shape[1], imgs.shape[2])
 
       else: # nnUNet
         # Model 2: nnU-Net model
-        trained_model = DeepSegLib.models.get_nnUNet(input_shape=config["input_shape"])
+        logging.info("Getting nnU-Net Model")
+        trained_model = DeepSegLib.models.get_nnUNet(input_shape=inputShape)
 
         # load weights of the pre-trained model
         pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_nnunet.h5"
@@ -638,9 +610,9 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
                     file_hash="f59d8a88cc56506dd1e4e3be85660d79c758d909fd5184ab69b54b855e3fc7fe",
                     hash_algorithm="sha256")
 
-        output_shape=(imgs.shape[0], imgs.shape[1], imgs.shape[2])
+      output_shape=(imgs.shape[0], imgs.shape[1], imgs.shape[2])
 
-      trained_model.summary(line_length=150)
+      #trained_model.summary(line_length=150)
       trained_model.load_weights(modelPath) #, by_name=True) 
       stopTime = time.time()
       logging.info("Getting pre-trained model completed in {0:.2f} seconds".format(stopTime-startTime))
@@ -657,7 +629,7 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       # predict the tumor boundries
       self.currentStatusLabel.text = "Predicting tumor segmentation"
       tumor_pred = DeepSegLib.predict.predict_segmentations(trained_model, img_preprocess, 
-                  tumor_type = config["tumor_type"], output_shape=output_shape)
+                  tumor_type = tumorType, output_shape = output_shape)
 
       # casting to unsigned int and reshape
       tumor_pred = np.array(tumor_pred).astype(np.uintc)
@@ -733,7 +705,7 @@ class DeepSegLogic(ScriptedLoadableModuleLogic):
       #images_list = ["case_flair.nii.gz"]
       parameterNode.SetParameter("images_num", str(1))
     if not parameterNode.GetParameter("image_shape"):
-      parameterNode.SetParameter("image_shape", "(240, 240, 155)") # 192, 224, 160
+      parameterNode.SetParameter("image_shape", "(192, 224, 160)") # 240, 240, 155
     if not parameterNode.GetParameter("tumor_type"):
       parameterNode.SetParameter("tumor_type", "whole") # all, whole, core, enhancing
 
@@ -753,8 +725,8 @@ class DeepSegLogic(ScriptedLoadableModuleLogic):
 
     return img
 
-  def crop_image(self, img, output_shape=np.array(config["image_shape"])):
-    # manual cropping to config["image_shape"] = (160, 224, 192)
+  def crop_image(self, img, output_shape=np.array((192, 224, 160))):
+    # manual cropping to (160, 224, 192)
     input_shape = np.array(img.shape)
     # center the cropped image
     offset = np.array((input_shape - output_shape)/2).astype(np.int)
@@ -769,9 +741,10 @@ class DeepSegLogic(ScriptedLoadableModuleLogic):
 
     return padded_img
 
-  def preprocess_images(self, imgs, dim=config["input_shape"]):
+  def preprocess_images(self, imgs, dim):
     # TODO: automatic cropping using img[~np.all(img == 0, axis=1)]
     img_preprocess = np.zeros(dim)
+    print("Shape img_preprocess", img_preprocess.shape)
     for i in range(dim[-1]):
       img_preprocess[:,:,:,i] = self.crop_image(imgs[:,:,:,i])
       img_preprocess[:,:,:,i] = self.norm_image(img_preprocess[:,:,:,i])

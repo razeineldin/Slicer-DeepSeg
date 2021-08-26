@@ -23,7 +23,7 @@ def get_enhancing_tumor_mask(data):
 def postprocess_tumor(seg_data, tumor_type = "all", output_shape = (240, 240, 155)):
     # post-process the enhancing tumor region
     seg_enhancing = (seg_data == 3)
-    if np.sum(seg_enhancing) < 1000:
+    if np.sum(seg_enhancing) < 200:
         seg_data[seg_enhancing] = 1
     else:
         seg_data[seg_enhancing] = 4
@@ -42,7 +42,7 @@ def postprocess_tumor(seg_data, tumor_type = "all", output_shape = (240, 240, 15
     x, y, z = offset
 
     # pad the preprocessed image
-    padded_seg = np.zeros(output_shape)
+    padded_seg = np.zeros(output_shape).astype(np.unit8)
     #padded_seg[x:x+seg_data.shape[0],y:y+seg_data.shape[1],z:z+seg_data.shape[2]] = seg_data
     padded_seg[x:x+seg_data.shape[0],y:y+seg_data.shape[1],z:z+seg_data.shape[2]] = seg_data[:,:,:padded_seg.shape[2]]
 
