@@ -57,6 +57,7 @@ from tensorflow.keras.utils import get_file
 
 # import functions from models module
 from DeepSegLib.models import *
+#from DeepSegLib.models_nnUNet import *
 from DeepSegLib.predict import *
 import DeepSegLib
 #from DeepSegLib import *
@@ -90,7 +91,7 @@ config["images"] = ["BraTS20_sample_case_flair.nii.gz", "BraTS20_sample_case_t1.
 # model parameters
 config["input_shape"] = (config["image_shape"][0], config["image_shape"][1], 
                          config["image_shape"][2], len(config["images"]))
-config["input_shape"] = (192, 224, 160, 1)
+config["input_shape"] = (192, 224, 160, 4)
 
 config["tumor_type"] = "all" # "all", "whole", "core", "enhancing"
 
@@ -568,94 +569,95 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       inputVolume4 = self.ui.T2Selector.currentNode()
       segVolumeNode = self.ui.outputSelector.currentNode()
 
-      # get the numpy array(s)
-      img1 = slicer.util.arrayFromVolume(inputVolume1)[..., np.newaxis]
-      #img2 = slicer.util.arrayFromVolume(inputVolume2)
-      #img3 = slicer.util.arrayFromVolume(inputVolume3)
-      #img4 = slicer.util.arrayFromVolume(inputVolume4)
+      modality_n = int(self._parameterNode.GetParameter("images_num"))
+      if modality_n ==1: # DeepSeg
+        config["input_shape"] = (192, 224, 160, 1)
+        img1 = slicer.util.arrayFromVolume(inputVolume1)[..., np.newaxis]
 
-      #imgs = np.stack([img1, img2, img3, img4], axis=3)
-      # fix the data structure of nrrd (x,y,z) and numpy (z,y,x)
-      #imgs = np.swapaxes(imgs, 0, 2)
-      img1 = np.swapaxes(img1, 0, 2)
+        # fix the data structure of nrrd (x,y,z) and numpy (z,y,x)
+        img1 = np.swapaxes(img1, 0, 2)
 
-      stopTime = time.time()
-      logging.info("Loadind data completed in {0:.2f} seconds".format(stopTime-startTime))
-      startTime = time.time()
+        stopTime = time.time()
+        logging.info("Loadind data completed in {0:.2f} seconds".format(stopTime-startTime))
+        startTime = time.time()
 
-      # preprocess image(s)
-      #img_preprocess = self.logic.preprocess_images(imgs)
-      img_preprocess = self.logic.preprocess_images(img1)
+        # preprocess image(s)
+        img_preprocess = self.logic.preprocess_images(img1, dim=config["input_shape"])
 
-      #print("img_preprocess:", img_preprocess.shape)
+      else: # 4 modalities (nnUNet)
+        config["input_shape"] = (192, 224, 160, 4)
+        # get the numpy array(s)
+        img1 = slicer.util.arrayFromVolume(inputVolume1)
+        img2 = slicer.util.arrayFromVolume(inputVolume2)
+        img3 = slicer.util.arrayFromVolume(inputVolume3)
+        img4 = slicer.util.arrayFromVolume(inputVolume4)
+
+        imgs = np.stack([img1, img2, img3, img4], axis=3)
+        # fix the data structure of nrrd (x,y,z) and numpy (z,y,x)
+        imgs = np.swapaxes(imgs, 0, 2)
+
+        stopTime = time.time()
+        logging.info("Loadind data completed in {0:.2f} seconds".format(stopTime-startTime))
+        startTime = time.time()
+
+        # preprocess image(s)
+        img_preprocess = self.logic.preprocess_images(imgs, dim=config["input_shape"])
+
+      print("img_preprocess:", img_preprocess.shape)
       #print("img_preprocess 0:", img_preprocess[:,:,:,0].shape)
       #img_preprocess1 = np.swapaxes(img_preprocess[:,:,:,0], 0, 2)
       #slicer.util.updateVolumeFromArray(segVolumeNode, img_preprocess1)
       stopTime = time.time()
       logging.info("Pre-processing data completed in {0:.2f} seconds".format(stopTime-startTime))
       self.progress.setValue(100)
-
       startTime = time.time()
 
       # predict tumor boundaries
       self.currentStatusLabel.text = "Downloading pre-trained model"
+
+
+      if modality_n ==1: # DeepSeg
       # Model 1: DeepSeg model
-      trained_model = DeepSegLib.models.get_deepSeg(input_shape=config["input_shape"])
+        trained_model = DeepSegLib.models.get_deepSeg(input_shape=config["input_shape"])
 
-      # load weights of the pre-trained model
-      pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_deepseg.h5"
-      modelPath = get_file(pretrainedURL.split("/")[-1], pretrainedURL,
-                  file_hash="6ef61c84b7506f783ae9b7deaa7d1294ca1944b8d5e9ca3e20af700dbe13b537",
-                  hash_algorithm="sha256")
+        # load weights of the pre-trained model
+        pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_deepseg.h5"
+        modelPath = get_file(pretrainedURL.split("/")[-1], pretrainedURL,
+                    file_hash="6ef61c84b7506f783ae9b7deaa7d1294ca1944b8d5e9ca3e20af700dbe13b537",
+                    hash_algorithm="sha256")
 
-      """ # Model 1: DeepSeg model
-      # trained_model = DeepSegLib.models.get_deepSeg(input_shape=config["input_shape"])
-      trained_model = DeepSegLib.models.get_deepSeg(input_shape=(192, 224, 160, 1))
+        output_shape=(img1.shape[0], img1.shape[1], img1.shape[2])
 
-      # load weights of the pre-trained model
-      pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_deepseg.h5"
-      modelPath = get_file(pretrainedURL.split("/")[-1], pretrainedURL,
-                  file_hash="337b87b98a97a05fe06098ae5ab271d01aef6312dce9890217c37d5f5229ef96",
-                  hash_algorithm="sha256")
+      else: # nnUNet
+        # Model 2: nnU-Net model
+        trained_model = DeepSegLib.models.get_nnUNet(input_shape=config["input_shape"])
 
+        # load weights of the pre-trained model
+        pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_nnunet.h5"
+        modelPath = get_file(pretrainedURL.split("/")[-1], pretrainedURL,
+                    file_hash="f59d8a88cc56506dd1e4e3be85660d79c758d909fd5184ab69b54b855e3fc7fe",
+                    hash_algorithm="sha256")
 
-      # Model 2: nnU-Net model
-      trained_model = DeepSegLib.models.get_nnUNet(input_shape=config["input_shape"])
+        output_shape=(imgs.shape[0], imgs.shape[1], imgs.shape[2])
 
-      # load weights of the pre-trained model
-      pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_nnunet.h5"
-      modelPath = get_file(pretrainedURL.split("/")[-1], pretrainedURL,
-                  file_hash="ed96275522fe21d97c52e57bd625b8a686b95fd199aa98874ce0ad054a501203",
-                  hash_algorithm="sha256")
-
-      # Model 3: nnU-Net model (8 base_filters)
-      trained_model = DeepSegLib.models.get_nnUNet(input_shape=config["input_shape"])
-
-      # load weights of the pre-trained model
-      pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_nnunet_2.h5"
-      modelPath = get_file(pretrainedURL.split("/")[-1], pretrainedURL,
-                  file_hash="6522c8e8f1e81f2173b3c40559a3679e20720d00ac87ab61aa33033fb616ac76",
-                  hash_algorithm="sha256")
-
-      # Model 4: residual U-Net model
-      trained_model = DeepSegLib.models.get_model(input_shape=config["input_shape"])
-
-      # load weights of the pre-trained model
-      pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model-238.h5"
-      modelPath = get_file(pretrainedURL.split("/")[-1], pretrainedURL,
-                  file_hash="b12111e871aa04436f2e19e79d24a77c39c22d301d651be842cd711d1ac391b8",
-                  hash_algorithm="sha256")"""
-
-      trained_model.load_weights(modelPath)#, by_name=True) 
+      trained_model.summary(line_length=150)
+      trained_model.load_weights(modelPath) #, by_name=True) 
       stopTime = time.time()
       logging.info("Getting pre-trained model completed in {0:.2f} seconds".format(stopTime-startTime))
       self.progress.setValue(400)
+
+      """if self.logic.abort:
+        self.progress.setValue(0)
+        self.progress.hide()
+        self.currentStatusLabel.text = "Idle"
+        return 0"""
+
       startTime = time.time()
 
       # predict the tumor boundries
       self.currentStatusLabel.text = "Predicting tumor segmentation"
       tumor_pred = DeepSegLib.predict.predict_segmentations(trained_model, img_preprocess, 
-                  tumor_type = config["tumor_type"], output_shape=(img1.shape[0], img1.shape[1], img1.shape[2]))
+                  tumor_type = config["tumor_type"], output_shape=output_shape)
 
       # casting to unsigned int and reshape
       tumor_pred = np.array(tumor_pred).astype(np.uintc)
@@ -665,6 +667,7 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       logging.info("Prediction completed in {0:.2f} seconds".format(stopTime-startTime))
       self.currentStatusLabel.text = "Completed"
       self.progress.setValue(1000)
+
       startTime = time.time()
 
       slicer.util.updateVolumeFromArray(segVolumeNode, tumor_pred)
@@ -691,6 +694,7 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       stopTime = time.time()
       logging.info("Visualization completed in {0:.2f} seconds".format(stopTime-startTime))
       self.progress.setValue(0)
+      self.progress.hide()
       #######################################################################
 
     except Exception as e:
