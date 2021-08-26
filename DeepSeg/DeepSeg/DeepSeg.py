@@ -427,21 +427,19 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self._parameterNode.SetParameter("tumor_type", "all")
 
   def onBackgroundSelector(self):
-    renderWindow = slicer.app.layoutManager().threeDWidget(0).threeDView().renderWindow()
-    renderer = renderWindow.GetRenderers().GetFirstRenderer()
+    viewNode = slicer.app.layoutManager().threeDWidget(0).mrmlViewNode()
     backgroundColor = self.ui.backgroundSelector.currentIndex
 
     if backgroundColor == 0: # black
-      renderer.SetBackground(0, 0, 0)
-      renderer.SetBackground2(0, 0, 0)
+      viewNode.SetBackgroundColor(0,0,0)
+      viewNode.SetBackgroundColor2(0,0,0)
     elif backgroundColor == 1: # white
-      renderer.SetBackground(1, 1, 1)
-      renderer.SetBackground2(1, 1, 1)
+      viewNode.SetBackgroundColor(1, 1, 1)
+      viewNode.SetBackgroundColor2(1, 1, 1)
     elif backgroundColor == 2: # light blue
-      renderer.SetBackground(140. / 255, 140. / 255, 165. / 255) # RGB
-      renderer.SetBackground2(85. / 255, 85. / 255, 140. / 255)
+      viewNode.SetBackgroundColor(140. / 255, 140. / 255, 165. / 255) # RGB
+      viewNode.SetBackgroundColor2(85. / 255, 85. / 255, 140. / 255)
 
-    renderWindow.Render()
 
   # TODO: Show 3D
   def showVolumeRenderingMIP(self, volumeNode, useSliceViewColors=True):
@@ -535,10 +533,10 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.ui.backgroundSelector.setCurrentIndex(0)
 
     slicer.util.resetSliceViews() # Reset field of view to show background volume maximized
+    self.currentStatusLabel.text = "Idle"
 
   # TODO: Cancel
   def onCancelButton(self):
-    logging.info("Aborting")
     self.currentStatusLabel.text = "Aborting"
     if self.logic:
       self.logic.abort = True
@@ -596,6 +594,7 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       stopTime = time.time()
       logging.info("Pre-processing data completed in {0:.2f} seconds".format(stopTime-startTime))
       self.progress.setValue(100)
+
       startTime = time.time()
 
       # predict tumor boundaries
@@ -650,7 +649,7 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       trained_model.load_weights(modelPath)#, by_name=True) 
       stopTime = time.time()
       logging.info("Getting pre-trained model completed in {0:.2f} seconds".format(stopTime-startTime))
-      self.progress.setValue(300)
+      self.progress.setValue(400)
       startTime = time.time()
 
       # predict the tumor boundries
@@ -664,11 +663,11 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       
       stopTime = time.time()
       logging.info("Prediction completed in {0:.2f} seconds".format(stopTime-startTime))
-      self.progress.setValue(900)
+      self.currentStatusLabel.text = "Completed"
+      self.progress.setValue(1000)
       startTime = time.time()
 
       slicer.util.updateVolumeFromArray(segVolumeNode, tumor_pred)
-
 
       # fix the orientation problem
       segVolumeNode.SetOrigin(inputVolume1.GetOrigin())
@@ -682,14 +681,16 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       slicer.util.setSliceViewerLayers(foreground=segVolumeNode)
       slicer.util.setSliceViewerLayers(foregroundOpacity=0.5)
 
-      # change the tumor colo space
+      # change the tumor color space
       displayNode = segVolumeNode.GetDisplayNode()
       displayNode.SetAndObserveColorNodeID("vtkMRMLColorTableNodeLabels") #vtkMRMLColorTableNodeRainbow
 
+      # show 3D segmentation
+      self.onShow3DButton()
+
       stopTime = time.time()
       logging.info("Visualization completed in {0:.2f} seconds".format(stopTime-startTime))
-      self.currentStatusLabel.text = "Completed"
-      self.progress.setValue(1000)
+      self.progress.setValue(0)
       #######################################################################
 
     except Exception as e:
