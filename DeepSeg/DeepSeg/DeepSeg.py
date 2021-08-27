@@ -544,15 +544,9 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       tumorType = self._parameterNode.GetParameter("tumor_type")
       inputShape = (int(imageShape[0]), int(imageShape[1]), int(imageShape[2]), modalityNum)
 
-      ### debuging ###
-      #print("imageShape:", imageShape, "\ntumorType:", tumorType, "\ninputShape:", inputShape, "\nmodalityNum:", modalityNum)
-      #return 0
-
       if modalityNum ==1: # DeepSeg
         img1 = slicer.util.arrayFromVolume(inputVolume1)
         imgs = img1[..., np.newaxis]
-        # fix the data structure of nrrd (x,y,z) and numpy (z,y,x)
-        imgs = np.swapaxes(imgs, 0, 2)
 
       else: # 4 modalities (nnUNet)
         # get the numpy array(s)
@@ -562,8 +556,9 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         img4 = slicer.util.arrayFromVolume(inputVolume4)
 
         imgs = np.stack([img1, img2, img3, img4], axis=3)
-        # fix the data structure of nrrd (x,y,z) and numpy (z,y,x)
-        imgs = np.swapaxes(imgs, 0, 2)
+
+      # fix the data structure of nrrd (x,y,z) and numpy (z,y,x)
+      imgs = np.swapaxes(imgs, 0, 2)
 
       stopTime = time.time()
       logging.info("Loadind data completed in {0:.2f} seconds".format(stopTime-startTime))
@@ -592,9 +587,10 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         trained_model = DeepSegLib.models.get_deepSeg(input_shape=inputShape)
 
         # load weights of the pre-trained model
-        pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_deepseg.h5"
+        # sha1sum model_DeepSeg.h5
+        pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_DeepSeg.h5"
         modelPath = get_file(pretrainedURL.split("/")[-1], pretrainedURL,
-                    file_hash="6ef61c84b7506f783ae9b7deaa7d1294ca1944b8d5e9ca3e20af700dbe13b537",
+                    file_hash="88d0a665a6faa08140c70f9bec915fc53ec39687",
                     hash_algorithm="sha256")
 
         #output_shape=(imgs.shape[0], imgs.shape[1], imgs.shape[2])
@@ -605,9 +601,9 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         trained_model = DeepSegLib.models.get_nnUNet(input_shape=inputShape)
 
         # load weights of the pre-trained model
-        pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_nnunet.h5"
+        pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_nnU-Net.h5"
         modelPath = get_file(pretrainedURL.split("/")[-1], pretrainedURL,
-                    file_hash="f59d8a88cc56506dd1e4e3be85660d79c758d909fd5184ab69b54b855e3fc7fe",
+                    file_hash="1a1990e9cfcd806231c3bd54aee62240594fee41",
                     hash_algorithm="sha256")
 
       output_shape=(imgs.shape[0], imgs.shape[1], imgs.shape[2])

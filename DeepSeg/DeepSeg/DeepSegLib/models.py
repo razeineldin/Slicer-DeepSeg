@@ -2,13 +2,13 @@
 from tensorflow.keras import backend as K
 from tensorflow.keras import Input, Model
 from tensorflow.keras.layers import concatenate, Conv3D, UpSampling3D, Activation, BatchNormalization
-from tensorflow.keras.layers import LeakyReLU, Add, SpatialDropout3D, MaxPooling3D, Conv3DTranspose 
+from tensorflow.keras.layers import LeakyReLU, Add, SpatialDropout3D, MaxPooling3D, Conv3DTranspose
 from tensorflow.keras.optimizers import RMSprop, Adam, SGD
 
 from tensorflow_addons.layers import InstanceNormalization
 #from keras_contrib.layers.normalization.instancenormalization import InstanceNormalization
 
-# DeepSeg model functions
+# Define model functions
 def create_convolution_block(input_layer, n_filters, batch_normalization=True, kernel=(3, 3, 3), activation=None,
                              padding='same', strides=(1, 1, 1), instance_normalization=False):
 
@@ -117,9 +117,9 @@ def create_context_module_nn(input_layer, n_level_filters, dropout_rate=0.3):
     convolution2 = create_convolution_block_nn(input_layer=dropout, n_filters=n_level_filters)
     return convolution2
 
-def get_nnUNet(input_shape=(128, 128, 128, 4), n_base_filters=24, depth=5, dropout_rate=0.5,
+def get_nnUNet(input_shape=(128, 128, 128, 4), n_base_filters=8, depth=5, dropout_rate=0.5,
                       n_segmentation_levels=3, n_labels=4, optimizer=Adam, initial_learning_rate=0.01,
-                      activation_name="softmax", max_level_filters=320, loss_function=None):
+                      loss_function="mse", activation_name="sigmoid", max_level_filters=320):
 
     inputs = Input(input_shape)
 
@@ -141,6 +141,8 @@ def get_nnUNet(input_shape=(128, 128, 128, 4), n_base_filters=24, depth=5, dropo
         level_output_layers.append(in_conv)
         current_layer = in_conv
 
+    current_layer = SpatialDropout3D(rate=dropout_rate)(current_layer)
+
     segmentation_layers = list()
     for level_number in range(depth - 2, -1, -1):
         up_sampling = create_up_sampling_module_nn(current_layer, level_filters[level_number])
@@ -154,12 +156,13 @@ def get_nnUNet(input_shape=(128, 128, 128, 4), n_base_filters=24, depth=5, dropo
     for level_number in reversed(range(n_segmentation_levels)):
         segmentation_layer = segmentation_layers[level_number]
         output_layer = segmentation_layer
-        
+
         if level_number > 0:
             output_layer = UpSampling3D(size=(2, 2, 2))(output_layer)
 
     activation_block = Activation(activation_name)(output_layer)
 
     model = Model(inputs=inputs, outputs=activation_block)
-    model.compile(optimizer=Adam(lr=initial_learning_rate), loss='mse', metrics=['accuracy'])
+    model.compile(optimizer=SGD(learning_rate=initial_learning_rate, momentum=0.99, nesterov=True),
+                  loss='mse', metrics=['accuracy'])
     return model

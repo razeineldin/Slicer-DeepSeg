@@ -42,9 +42,9 @@ def postprocess_tumor(seg_data, tumor_type = "all", output_shape = (240, 240, 15
     x, y, z = offset
 
     # pad the preprocessed image
-    padded_seg = np.zeros(output_shape).astype(np.unit8)
-    #padded_seg[x:x+seg_data.shape[0],y:y+seg_data.shape[1],z:z+seg_data.shape[2]] = seg_data
-    padded_seg[x:x+seg_data.shape[0],y:y+seg_data.shape[1],z:z+seg_data.shape[2]] = seg_data[:,:,:padded_seg.shape[2]]
+    padded_seg = np.zeros(output_shape).astype(np.ubyte)
+    #padded_seg[x:x+seg_data.shape[0],y:y+seg_data.shape[1],z:z+seg_data.shape[2]] = seg_data[:,:,:padded_seg.shape[2]]
+    padded_seg[x:x+seg_data.shape[0],y:y+seg_data.shape[1],z:z+seg_data.shape[2]] = seg_data[:,:,2:padded_seg.shape[2]+2]
 
     return padded_seg
 
