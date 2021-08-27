@@ -79,7 +79,6 @@ ICON_DIR = os.path.dirname(os.path.realpath(__file__)) + "/Resources/Icons/"
 
 #####################################################################
 
-
 #
 # DeepSeg
 #
@@ -91,16 +90,16 @@ class DeepSeg(ScriptedLoadableModule):
 
   def __init__(self, parent):
     ScriptedLoadableModule.__init__(self, parent)
-    self.parent.title = "DeepSeg"  # TODO: make this more human readable by adding spaces
-    self.parent.categories=["Examples"]
-    self.parent.dependencies = []  # TODO: add here list of module names that this module requires
-    self.parent.contributors=["Ramy Zeineldin, Pauline Weimann (Reutlingen University)"]
-    # TODO: update with short description of the module and a link to online module documentation
+    self.parent.title = "DeepSeg"
+    self.parent.categories = ["Machine Learning", "Segmentation"]
+
+    self.parent.dependencies = ["SegmentEditor"]
+    #self.parent.dependencies = ["Segmentations"]
+    self.parent.contributors = ["Ramy Zeineldin (Reutlingen University, Karlsruhe Institute of Technology), Pauline Weimann (Reutlingen University)"]
     self.parent.helpText = """
-This is an example of scripted loadable module bundled in an extension.
-See more information in <a href="https://github.com/organization/projectname#DeepSeg">module documentation</a>.
+This modules provides a basic interface for brain tumour segmentation using deep learning-based methods
+See more information in <a href="https://github.com/razeineldin/Slicer-DeepSeg">module repository</a>.
 """
-    # TODO: replace with organization, grant and thanks
     self.parent.acknowledgementText = """
 This module has been done within the Research Group Computer Assisted Medicine (CaMed), Reutlingen University and the Health Robotics and Automation (HERA), Institute for Anthropomatics and Robotics (IAR), Karlsruhe Institute of Technology (KIT), Germany. The authors acknowledge support by the state of Baden-Württemberg through bwHPC. This work is partialy funded by the German Academic Exchange Service (DAAD) under Scholarship No. 91705803.
 
@@ -148,6 +147,7 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     # in batch mode, without a graphical user interface.
     self.logic = DeepSegLogic()
 
+    # TODO: Convert into .ui file
     # Status and Progress
     statusLabel = qt.QLabel("Status: ")
     self.currentStatusLabel = qt.QLabel("Idle")
@@ -313,16 +313,8 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.ui.outputSelector.setCurrentNode(self._parameterNode.GetNodeReference("OutputVolume"))
 
     # Update buttons states and tooltips
-
-
     if self._parameterNode.GetNodeReference("InputVolume1") and self._parameterNode.GetNodeReference("OutputVolume"):
-      # show 3D Button
-      self.ui.show3DButton.toolTip = "Create 3D Model"
-      self.ui.show3DButton.enabled = True
-      # edit seg Button
-      self.ui.editSegButton.toolTip = "Switch to Segment Editor"
-      self.ui.editSegButton.enabled = True
-      # Cancel Button
+      # cancel Button
       self.cancelButton.toolTip = "Cancel the execution of the module"
       self.cancelButton.enabled = True
       # apply Button
@@ -330,18 +322,27 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.applyButton.enabled = True
 
     else:
+      # cancel Button
+      self.cancelButton.toolTip = "Cancel the execution of the module"
+      self.cancelButton.enabled = False
+      # apply Button
+      self.applyButton.toolTip = "Select input and output volume nodes"
+      self.applyButton.enabled = False
+
+    if self._parameterNode.GetParameter("completed") == "True":
+      # show 3D Button
+      self.ui.show3DButton.toolTip = "Create 3D Model"
+      self.ui.show3DButton.enabled = True
+      # edit seg Button
+      self.ui.editSegButton.toolTip = "Switch to Segment Editor"
+      self.ui.editSegButton.enabled = True
+    else:
       # show 3D Button
       self.ui.show3DButton.toolTip = "Apply the algorithm first!"
       self.ui.show3DButton.enabled = False
       # edit seg Button
       self.ui.editSegButton.toolTip = "Apply the algorithm first!"
       self.ui.editSegButton.enabled = False
-      # Cancel Button
-      self.cancelButton.toolTip = "Cancel the execution of the module"
-      self.cancelButton.enabled = False
-      # apply Button
-      self.applyButton.toolTip = "Select input and output volume nodes"
-      self.applyButton.enabled = False
 
     # restore defaults Button
     self.restoreDefaultsButton.toolTip = "Reset parameters to default"
@@ -376,7 +377,6 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
   def onModalitySelector(self):
     modality = self.ui.modalitySelector.currentIndex
-    #print("modality:", modality)
 
     if modality == 0: # FLAIR
       self._parameterNode.SetParameter("images_num", "1")
@@ -417,7 +417,6 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       viewNode.SetBackgroundColor(140. / 255, 140. / 255, 165. / 255) # RGB
       viewNode.SetBackgroundColor2(85. / 255, 85. / 255, 140. / 255)
 
-
   # TODO: Show 3D
   def showVolumeRenderingMIP(self, volumeNode, useSliceViewColors=True):
     """Render volume using maximum intensity projection
@@ -433,12 +432,7 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       volRenLogic.CopyDisplayToVolumeRenderingDisplayNode(displayNode)
     else:
       displayNode.GetVolumePropertyNode().Copy(volRenLogic.GetPresetByName("MR-MIP"))
-      #displayNode.GetVolumePropertyNode().Copy(volRenLogic.GetPresetByName("MR-Default")) #"MR-MIP"
 
-    # Switch views to MIP mode
-    #for viewNode in slicer.util.getNodesByClass("vtkMRMLViewNode"):
-    #  viewNode.SetRaycastTechnique(slicer.vtkMRMLViewNode.MaximumIntensityProjection)
-    # Show volume rendering
     displayNode.SetVisibility(True)
 
   def showTransparentRendering(self, volumeNode, maxOpacity=0.2, gradientThreshold=30.0):
@@ -463,20 +457,12 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     displayNode.SetVisibility(True)
   
   def onShow3DButton(self):
-    """ labelmapVolumeNode = self._parameterNode.GetNodeReference("InputVolume1")
-    seg = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentationNode")
-    slicer.modules.segmentations.logic().ImportLabelmapToSegmentationNode(labelmapVolumeNode, seg)
-    seg.CreateClosedSurfaceRepresentation()
-    slicer.mrmlScene.RemoveNode(labelmapVolumeNode)"""
-
     brainVolumeNode = self._parameterNode.GetNodeReference("InputVolume1")
     tumorVolumeNode = self._parameterNode.GetNodeReference("OutputVolume")
 
     self.showVolumeRenderingMIP(tumorVolumeNode)
-    #self.showTransparentRendering(tumorVolumeNode, 0.2, 30.0)
     self.showTransparentRendering(brainVolumeNode, 0.3, 60.0)
-    #self.showVolumeRenderingMIP(brainVolumeNode, useSliceViewColors=False)
-
+  
     # Center the 3D View on the Scene
     layoutManager = slicer.app.layoutManager()
     threeDWidget = layoutManager.threeDWidget(0)
@@ -522,13 +508,13 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     """
     Run processing when user clicks "Apply" button.
     """
-
     try:
       ####################### add your main code here #######################
       # Compute output
       startTime = time.time()
       logging.info("Pre-processing")
       self.currentStatusLabel.text = "Pre-processing"
+      self._parameterNode.SetParameter("status", "pre-processing")
       self.progress.setValue(0)
       self.progress.show()
 
@@ -578,8 +564,8 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       startTime = time.time()
 
       # predict tumor boundaries
-      self.currentStatusLabel.text = "Downloading pre-trained model"
-
+      self.currentStatusLabel.text = "Downloading"
+      self._parameterNode.SetParameter("status", "downloading")
 
       if modalityNum == 1: # DeepSeg
         # Model 1: DeepSeg model
@@ -623,7 +609,8 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       startTime = time.time()
 
       # predict the tumor boundries
-      self.currentStatusLabel.text = "Predicting tumor segmentation"
+      self.currentStatusLabel.text = "Predicting"
+      self._parameterNode.SetParameter("status", "predicting")
       tumor_pred = DeepSegLib.predict.predict_segmentations(trained_model, img_preprocess, 
                   tumor_type = tumorType, output_shape = output_shape)
 
@@ -634,6 +621,7 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       stopTime = time.time()
       logging.info("Prediction completed in {0:.2f} seconds".format(stopTime-startTime))
       self.currentStatusLabel.text = "Completed"
+      self._parameterNode.SetParameter("completed", "True")
       self.progress.setValue(1000)
 
       startTime = time.time()
@@ -704,6 +692,11 @@ class DeepSegLogic(ScriptedLoadableModuleLogic):
       parameterNode.SetParameter("image_shape", "(192, 224, 160)") # 240, 240, 155
     if not parameterNode.GetParameter("tumor_type"):
       parameterNode.SetParameter("tumor_type", "whole") # all, whole, core, enhancing
+
+    if not parameterNode.GetParameter("completed"):
+      parameterNode.SetParameter("completed", "False")
+    if not parameterNode.GetParameter("status"):
+      parameterNode.SetParameter("status", "idle")
 
   ####################### add your functions here #######################
   def norm_image(self, img, norm_type = "norm"):
