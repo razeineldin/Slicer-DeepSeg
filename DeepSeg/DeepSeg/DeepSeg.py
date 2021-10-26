@@ -417,7 +417,6 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       viewNode.SetBackgroundColor(140. / 255, 140. / 255, 165. / 255) # RGB
       viewNode.SetBackgroundColor2(85. / 255, 85. / 255, 140. / 255)
 
-  # TODO: Show 3D
   def showVolumeRenderingMIP(self, volumeNode, useSliceViewColors=True):
     """Render volume using maximum intensity projection
     :param useSliceViewColors: use the same colors as in slice views.

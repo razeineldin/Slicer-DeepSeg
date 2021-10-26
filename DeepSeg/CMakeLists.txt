@@ -1,15 +1,15 @@
 cmake_minimum_required(VERSION 3.13.4)
 
-project(DeepSeg)
+project(Slicer-DeepSeg)
 
 #-----------------------------------------------------------------------------
 # Extension meta-information
-set(EXTENSION_HOMEPAGE "https://www.slicer.org/wiki/Documentation/Nightly/Extensions/DeepSeg")
+set(EXTENSION_HOMEPAGE "https://www.slicer.org/wiki/Documentation/Nightly/Extensions/Slicer-DeepSeg")
 set(EXTENSION_CATEGORY "Examples")
 set(EXTENSION_CONTRIBUTORS "John Doe (AnyWare Corp.)")
 set(EXTENSION_DESCRIPTION "This is an example of an extension using SuperBuild to build a dependent project named Foo")
-set(EXTENSION_ICONURL "http://www.example.com/Slicer/Extensions/DeepSeg.png")
-set(EXTENSION_SCREENSHOTURLS "http://www.example.com/Slicer/Extensions/DeepSeg/Screenshots/1.png")
+set(EXTENSION_ICONURL "http://www.example.com/Slicer/Extensions/Slicer-DeepSeg.png")
+set(EXTENSION_SCREENSHOTURLS "http://www.example.com/Slicer/Extensions/Slicer-DeepSeg/Screenshots/1.png")
 set(EXTENSION_DEPENDS "NA") # Specified as a list or "NA" if no dependencies
 set(EXTENSION_BUILD_SUBDIRECTORY inner-build)
 
@@ -35,8 +35,7 @@ endif()
 
 #-----------------------------------------------------------------------------
 # Extension modules
-add_subdirectory(DeepSeg)
-add_subdirectory(DeepSegSampleData)
+add_subdirectory(Slicer-DeepSeg)
 ## NEXT_MODULE
 
 #-----------------------------------------------------------------------------
