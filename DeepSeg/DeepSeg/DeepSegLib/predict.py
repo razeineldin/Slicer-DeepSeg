@@ -20,6 +20,47 @@ def get_tumor_core_mask(data):
 def get_enhancing_tumor_mask(data):
     return data == 4
 
+def norm_image(img, norm_type = "norm"):
+    if norm_type == "standard_norm": # standarization, same dataset
+        img_mean = img.mean()
+        img_std = img.std()
+        img_std = 1 if img.std()==0 else img.std()
+        img = (img - img_mean) / img_std
+    elif norm_type == "norm": # different datasets
+        img = (img - np.min(img))/(np.ptp(img)) # (np.max(img) - np.min(img))
+    elif norm_type == "norm_slow": # different datasets
+#         img = (img - np.min(img))/(np.max(img) - np.min(img))
+        img_ptp = 1 if np.ptp(img)== 0 else np.ptp(img) 
+        img = (img - np.min(img))/img_ptp
+
+    return img
+
+def crop_image(img, output_shape=np.array((192, 224, 160))):
+    # manual cropping to (160, 224, 192)
+    input_shape = np.array(img.shape)
+    # center the cropped image
+    offset = np.array((input_shape - output_shape)/2).astype(np.int)
+    offset[offset<0] = 0
+    x, y, z = offset
+    crop_img = img[x:x+output_shape[0], y:y+output_shape[1], z:z+output_shape[2]]
+
+    # pad the preprocessed image
+    padded_img = np.zeros(output_shape)
+    x, y, z = np.array((output_shape - np.array(crop_img.shape))/2).astype(np.int)
+    padded_img[x:x+crop_img.shape[0],y:y+crop_img.shape[1],z:z+crop_img.shape[2]] = crop_img
+
+    return padded_img
+
+def preprocess_images(imgs, dim):
+    # TODO: automatic cropping using img[~np.all(img == 0, axis=1)]
+    img_preprocess = np.zeros(dim)
+    print("Shape img_preprocess", img_preprocess.shape)
+    for i in range(dim[-1]):
+      img_preprocess[:,:,:,i] = crop_image(imgs[:,:,:,i])
+      img_preprocess[:,:,:,i] = norm_image(img_preprocess[:,:,:,i])
+
+    return img_preprocess
+
 def postprocess_tumor(seg_data, tumor_type = "all", output_shape = (240, 240, 155)):
     # post-process the enhancing tumor region
     seg_enhancing = (seg_data == 3)
