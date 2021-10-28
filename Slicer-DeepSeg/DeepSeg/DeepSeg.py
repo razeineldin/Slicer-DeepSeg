@@ -380,6 +380,7 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     if modality == 0: # FLAIR
       self._parameterNode.SetParameter("images_num", "1")
+
     elif modality == 1: # FLAIR, T1, T1ce, T2
       self._parameterNode.SetParameter("images_num", "4")
 
