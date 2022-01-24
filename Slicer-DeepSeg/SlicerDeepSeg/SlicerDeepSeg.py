@@ -6,8 +6,6 @@ import vtk, qt, ctk, slicer
 from slicer.ScriptedLoadableModule import *
 from slicer.util import VTKObservationMixin
 
-####################### add your imports here #######################
-
 try:
   import matplotlib.pyplot as plt
 except:
@@ -53,16 +51,11 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 from tensorflow.keras.utils import get_file
 
-#from nilearn.image import crop_img as crop_image
+# import functions from our library
+import SlicerDeepSegLib
+from SlicerDeepSegLib import *
 
-# import functions from models module
-from DeepSegLib.models import *
-#from DeepSegLib.models_nnUNet import *
-from DeepSegLib.predict import *
-import DeepSegLib
-#from DeepSegLib import *
-
-# Tensorflow 2.XX\n",
+# GPU handling (TF 2.X)
 if float(tf.__version__[:3]) >= 2.0:
   os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
   os.environ["CUDA_VISIBLE_DEVICES"] = "0" # "0,1"
@@ -75,30 +68,28 @@ if float(tf.__version__[:3]) >= 2.0:
       logical_gpus = tf.config.experimental.list_logical_devices("GPU")
       print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs\n")
 
-ICON_DIR = os.path.dirname(os.path.realpath(__file__)) + "/Resources/Icons/"
-
-#####################################################################
+# TODO: Add local icons to the buttons
+#ICON_DIR = os.path.dirname(os.path.realpath(__file__)) + "/Resources/Icons/"
 
 #
-# DeepSeg
+# SlicerDeepSeg
 #
 
-class DeepSeg(ScriptedLoadableModule):
+class SlicerDeepSeg(ScriptedLoadableModule):
   """Uses ScriptedLoadableModule base class, available at:
   https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
   """
 
   def __init__(self, parent):
     ScriptedLoadableModule.__init__(self, parent)
-    self.parent.title = "DeepSeg"
+    self.parent.title = "SlicerDeepSeg"
     self.parent.categories = ["Machine Learning", "Segmentation"]
 
     self.parent.dependencies = ["SegmentEditor"]
-    #self.parent.dependencies = ["Segmentations"]
     self.parent.contributors = ["Ramy Zeineldin (Reutlingen University, Karlsruhe Institute of Technology), Pauline Weimann (Reutlingen University)"]
     self.parent.helpText = """
 This modules provides a basic interface for brain tumour segmentation using deep learning-based methods
-See more information in <a href="https://github.com/razeineldin/Slicer-DeepSeg">module repository</a>.
+See more information in <a href="https://github.com/razeineldin/SlicerDeepSeg">module repository</a>.
 """
     self.parent.acknowledgementText = """
 This module has been done within the Research Group Computer Assisted Medicine (CaMed), Reutlingen University and the Health Robotics and Automation (HERA), Institute for Anthropomatics and Robotics (IAR), Karlsruhe Institute of Technology (KIT), Germany. The authors acknowledge support by the state of Baden-Württemberg through bwHPC. This work is partialy funded by the German Academic Exchange Service (DAAD) under Scholarship No. 91705803.
@@ -106,10 +97,10 @@ This module has been done within the Research Group Computer Assisted Medicine (
 """
 
 #
-# DeepSegWidget
+# SlicerDeepSegWidget
 #
 
-class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
+class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
   """Uses ScriptedLoadableModuleWidget base class, available at:
   https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
   """
@@ -134,7 +125,7 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     # Load widget from .ui file (created by Qt Designer).
     # Additional widgets can be instantiated manually and added to self.layout.
-    uiWidget = slicer.util.loadUI(self.resourcePath("UI/DeepSeg.ui"))
+    uiWidget = slicer.util.loadUI(self.resourcePath("UI/SlicerDeepSeg.ui"))
     self.layout.addWidget(uiWidget)
     self.ui = slicer.util.childWidgetVariables(uiWidget)
 
@@ -145,7 +136,7 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     # Create logic class. Logic implements all computations that should be possible to run
     # in batch mode, without a graphical user interface.
-    self.logic = DeepSegLogic()
+    self.logic = SlicerDeepSegLogic()
 
     # TODO: Convert into .ui file
     # Status and Progress
@@ -304,7 +295,6 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     # Make sure GUI changes do not call updateParameterNodeFromGUI (it could cause infinite loop)
     self._updatingGUIFromParameterNode = True
 
-    ####################### add your ui connected components here #######################
     # Update node selectors and sliders
     self.ui.FLAIRSelector.setCurrentNode(self._parameterNode.GetNodeReference("InputVolume1"))
     self.ui.T1Selector.setCurrentNode(self._parameterNode.GetNodeReference("InputVolume2"))
@@ -348,8 +338,6 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.restoreDefaultsButton.toolTip = "Reset parameters to default"
     self.restoreDefaultsButton.enabled = True
 
-    #####################################################################################
-
     # All the GUI updates are done
     self._updatingGUIFromParameterNode = False
 
@@ -364,14 +352,11 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     wasModified = self._parameterNode.StartModify()  # Modify all properties in a single batch
 
-    ####################### add your ui connected components here #######################
     self._parameterNode.SetNodeReferenceID("InputVolume1", self.ui.FLAIRSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("InputVolume2", self.ui.T1Selector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("InputVolume3", self.ui.T1ceSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("InputVolume4", self.ui.T2Selector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("OutputVolume", self.ui.outputSelector.currentNodeID)
-
-    #####################################################################################
 
     self._parameterNode.EndModify(wasModified)
 
@@ -380,7 +365,6 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     if modality == 0: # FLAIR
       self._parameterNode.SetParameter("images_num", "1")
-
     elif modality == 1: # FLAIR, T1, T1ce, T2
       self._parameterNode.SetParameter("images_num", "4")
 
@@ -509,7 +493,6 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     Run processing when user clicks "Apply" button.
     """
     try:
-      ####################### add your main code here #######################
       # Compute output
       startTime = time.time()
       logging.info("Pre-processing")
@@ -551,7 +534,7 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       startTime = time.time()
 
       # preprocess image(s)
-      img_preprocess = DeepSegLib.predict.preprocess_images(imgs, dim=inputShape)
+      img_preprocess = self.logic.preprocess_images(imgs, dim=inputShape)
 
       ### debuging ###
       #print("img_preprocess:", img_preprocess.shape)
@@ -570,19 +553,13 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       if modalityNum == 1: # DeepSeg
         # Model 1: DeepSeg model
         logging.info("Getting DeepSeg Model")
-        trained_model = DeepSegLib.models.get_deepSeg(input_shape=inputShape)
+        trained_model = SlicerDeepSegLib.models.get_deepSeg(input_shape=inputShape)
 
         # load weights of the pre-trained model
         # sha1sum model_DeepSeg.h5
-        """pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_DeepSeg.h5"
+        pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_DeepSeg.h5"
         modelPath = get_file(pretrainedURL.split("/")[-1], pretrainedURL,
                     file_hash="88d0a665a6faa08140c70f9bec915fc53ec39687",
-                    hash_algorithm="sha256") """
-
-        # new model weights 2021-10-29
-        pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_DeepSeg_21.h5"
-        modelPath = get_file(pretrainedURL.split("/")[-1], pretrainedURL,
-                    file_hash="941eb4b2c7da98310a95176e7adabe8f84d2e3df",
                     hash_algorithm="sha256")
 
         #output_shape=(imgs.shape[0], imgs.shape[1], imgs.shape[2])
@@ -590,7 +567,7 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       else: # nnUNet
         # Model 2: nnU-Net model
         logging.info("Getting nnU-Net Model")
-        trained_model = DeepSegLib.models.get_nnUNet(input_shape=inputShape)
+        trained_model = SlicerDeepSegLib.models.get_nnUNet(input_shape=inputShape)
 
         # load weights of the pre-trained model
         pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_nnU-Net.h5"
@@ -617,7 +594,7 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       # predict the tumor boundries
       self.currentStatusLabel.text = "Predicting"
       self._parameterNode.SetParameter("status", "predicting")
-      tumor_pred = DeepSegLib.predict.predict_segmentations(trained_model, img_preprocess, 
+      tumor_pred = SlicerDeepSegLib.predict.predict_segmentations(trained_model, img_preprocess, 
                   tumor_type = tumorType, output_shape = output_shape)
 
       # casting to unsigned int and reshape
@@ -657,7 +634,6 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       logging.info("Visualization completed in {0:.2f} seconds".format(stopTime-startTime))
       self.progress.setValue(0)
       self.progress.hide()
-      #######################################################################
 
     except Exception as e:
       self.currentStatusLabel.text = "Exception"
@@ -666,10 +642,10 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       traceback.print_exc()
 
 #
-# DeepSegLogic
+# SlicerDeepSegLogic
 #
 
-class DeepSegLogic(ScriptedLoadableModuleLogic):
+class SlicerDeepSegLogic(ScriptedLoadableModuleLogic):
   """This class should implement all the actual
   computation done by your module.  The interface
   should be such that other python code can import
@@ -704,11 +680,52 @@ class DeepSegLogic(ScriptedLoadableModuleLogic):
     if not parameterNode.GetParameter("status"):
       parameterNode.SetParameter("status", "idle")
 
+  def norm_image(self, img, norm_type = "norm"):
+    if norm_type == "standard_norm": # standarization, same dataset
+        img_mean = img.mean()
+        img_std = img.std()
+        img_std = 1 if img.std()==0 else img.std()
+        img = (img - img_mean) / img_std
+    elif norm_type == "norm": # different datasets
+        img = (img - np.min(img))/(np.ptp(img)) # (np.max(img) - np.min(img))
+    elif norm_type == "norm_slow": # different datasets
+#         img = (img - np.min(img))/(np.max(img) - np.min(img))
+        img_ptp = 1 if np.ptp(img)== 0 else np.ptp(img) 
+        img = (img - np.min(img))/img_ptp
+
+    return img
+
+  def crop_image(self, img, output_shape=np.array((192, 224, 160))):
+    # manual cropping to (160, 224, 192)
+    input_shape = np.array(img.shape)
+    # center the cropped image
+    offset = np.array((input_shape - output_shape)/2).astype(np.int)
+    offset[offset<0] = 0
+    x, y, z = offset
+    crop_img = img[x:x+output_shape[0], y:y+output_shape[1], z:z+output_shape[2]]
+
+    # pad the preprocessed image
+    padded_img = np.zeros(output_shape)
+    x, y, z = np.array((output_shape - np.array(crop_img.shape))/2).astype(np.int)
+    padded_img[x:x+crop_img.shape[0],y:y+crop_img.shape[1],z:z+crop_img.shape[2]] = crop_img
+
+    return padded_img
+
+  def preprocess_images(self, imgs, dim):
+    # TODO: automatic cropping using img[~np.all(img == 0, axis=1)]
+    img_preprocess = np.zeros(dim)
+    print("Shape img_preprocess", img_preprocess.shape)
+    for i in range(dim[-1]):
+      img_preprocess[:,:,:,i] = self.crop_image(imgs[:,:,:,i])
+      img_preprocess[:,:,:,i] = self.norm_image(img_preprocess[:,:,:,i])
+
+    return img_preprocess
+
 #
-# DeepSegTest
+# SlicerDeepSegTest
 #
 
-class DeepSegTest(ScriptedLoadableModuleTest):
+class SlicerDeepSegTest(ScriptedLoadableModuleTest):
   """
   This is the test case for your scripted module.
   Uses ScriptedLoadableModuleTest base class, available at:
@@ -755,7 +772,7 @@ class DeepSegTest(ScriptedLoadableModuleTest):
 
     # Test the module logic
 
-    logic = DeepSegLogic()
+    logic = SlicerDeepSegLogic()
 
     # Test algorithm with threshold
     logic.process(inputVolume, outputVolume, threshold, True)

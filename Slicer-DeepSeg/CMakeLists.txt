@@ -35,7 +35,7 @@ endif()
 
 #-----------------------------------------------------------------------------
 # Extension modules
-add_subdirectory(Slicer-DeepSeg)
+add_subdirectory(SlicerDeepSeg)
 ## NEXT_MODULE
 
 #-----------------------------------------------------------------------------
