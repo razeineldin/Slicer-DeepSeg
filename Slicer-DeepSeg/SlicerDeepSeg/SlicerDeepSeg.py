@@ -1,59 +1,28 @@
 import os
+import sys
+import time
 import unittest
 import logging
 import vtk, qt, ctk, slicer
 
+# 3D Slicer imports
 from slicer.ScriptedLoadableModule import *
 from slicer.util import VTKObservationMixin
 
-try:
-  import matplotlib.pyplot as plt
-except:
-  slicer.util.pip_install("matplotlib")
-  import matplotlib.pyplot as plt
-# TODO: add other imports
-try:
-  import numpy as np
-except:
-  slicer.util.pip_install("numpy~=1.19.2")
-  import numpy as np
-try:
-  import nibabel as nib
-except:
-  slicer.util.pip_install("nibabel")
-  import nibabel as nib
-try:
-  from nilearn.image import crop_img as cropImage
-except:
-  slicer.util.pip_install("nilearn")
-  from nilearn.image import crop_img as cropImage
-
-import sys
-import time
-sys.argv = ["pdm"]
-import tensorflow.python
-
-try:
-  import tensorflow as tf
-except:
-  slicer.util.pip_install("tensorflow")
-  import tensorflow as tf
-
-import numpy as np
-import nibabel as nib
-
-import sys
+# Deep learning imports
 sys.argv = ["pdm"]
 import tensorflow.python
 import tensorflow as tf
 
 # Utlity functions imports
 import matplotlib.pyplot as plt
+import numpy as np
+import nibabel as nib
 from tensorflow.keras.utils import get_file
+from nilearn.image import crop_img as cropImage
 
-# Import functions from our library
+# SlicerDeepSeg imports
 import SlicerDeepSegLib
-from SlicerDeepSegLib import *
 
 # GPU handling (TF 2.X)
 if float(tf.__version__[:3]) >= 2.0:
@@ -659,6 +628,10 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       displayNode = outputVolume.GetDisplayNode()
       displayNode.SetAndObserveColorNodeID("vtkMRMLColorTableNodeLabels") #vtkMRMLColorTableNodeRainbow
 
+      # Make sure that all labels are displayed
+      displayNode.SetAutoWindowLevel(0)
+      displayNode.SetAutoWindowLevel(1)
+
       # Show 3D segmentation
       self.show3DView()
 
@@ -722,34 +695,34 @@ class SlicerDeepSegLogic(ScriptedLoadableModuleLogic):
 
   def normalizeImage(self, img, norm_type = "norm"):
     if norm_type == "standard_norm": # standarization, same dataset
-        img_mean = img.mean()
-        img_std = img.std()
-        img_std = 1 if img.std()==0 else img.std()
-        img = (img - img_mean) / img_std
+        imageMean = img.mean()
+        imageStandadDeviation = img.std()
+        imageStandadDeviation = 1 if img.std()==0 else img.std()
+        img = (img - imageMean) / imageStandadDeviation
     elif norm_type == "norm": # different datasets
         img = (img - np.min(img))/(np.ptp(img)) # (np.max(img) - np.min(img))
     elif norm_type == "norm_slow": # different datasets
 #         img = (img - np.min(img))/(np.max(img) - np.min(img))
-        img_ptp = 1 if np.ptp(img)== 0 else np.ptp(img) 
-        img = (img - np.min(img))/img_ptp
+        imagePeak = 1 if np.ptp(img)== 0 else np.ptp(img) 
+        img = (img - np.min(img))/imagePeak
 
     return img
 
   def cropImage(self, img, output_shape=np.array((192, 224, 160))):
-    # manual cropping to (160, 224, 192)
+    # Manual cropping to (160, 224, 192)
     input_shape = np.array(img.shape)
-    # center the cropped image
+    # Center the cropped image
     offset = np.array((input_shape - output_shape)/2).astype(np.int)
     offset[offset<0] = 0
     x, y, z = offset
-    crop_img = img[x:x+output_shape[0], y:y+output_shape[1], z:z+output_shape[2]]
+    croppedImage = img[x:x+output_shape[0], y:y+output_shape[1], z:z+output_shape[2]]
 
-    # pad the preprocessed image
-    padded_img = np.zeros(output_shape)
-    x, y, z = np.array((output_shape - np.array(crop_img.shape))/2).astype(np.int)
-    padded_img[x:x+crop_img.shape[0],y:y+crop_img.shape[1],z:z+crop_img.shape[2]] = crop_img
+    # Pad the preprocessed image
+    paddedImage = np.zeros(output_shape)
+    x, y, z = np.array((output_shape - np.array(croppedImage.shape))/2).astype(np.int)
+    paddedImage[x:x+croppedImage.shape[0],y:y+croppedImage.shape[1],z:z+croppedImage.shape[2]] = croppedImage
 
-    return padded_img
+    return paddedImage
 
   def preprocessImages(self, images, dim):
     # TODO: Automatic cropping using img[~np.all(img == 0, axis=1)]

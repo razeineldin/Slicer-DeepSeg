@@ -1,0 +1,22 @@
+========================================================
+# Install dependcies from the 3D Slicer python terminal:
+========================================================
+from slicer.util import pip_install; pip_install('--upgrade matplotlib --force-reinstall')
+from slicer.util import pip_install; pip_install('--upgrade numpy~=1.19.2 --force-reinstall')
+from slicer.util import pip_install; pip_install('--upgrade nibabel --force-reinstall')
+from slicer.util import pip_install; pip_install('--upgrade nilearn --force-reinstall')
+from slicer.util import pip_install; pip_install('--upgrade tensorflow --force-reinstall')
+from slicer.util import pip_install; pip_install('--upgrade tensorflow_addons --force-reinstall')
+
+
+===============================
+# Or using the Ubuntu terminal:
+===============================
+cd Slicer-4.11.20200930-linux-amd64
+
+./bin/PythonSlicer -c "from slicer.util import pip_install; pip_install('--upgrade matplotlib --force-reinstall')"
+./bin/PythonSlicer -c "from slicer.util import pip_install; pip_install('--upgrade numpy~=1.19.2 --force-reinstall')"
+./bin/PythonSlicer -c "from slicer.util import pip_install; pip_install('--upgrade nibabel --force-reinstall')"
+./bin/PythonSlicer -c "from slicer.util import pip_install; pip_install('--upgrade nilearn --force-reinstall')"
+./bin/PythonSlicer -c "from slicer.util import pip_install; pip_install('--upgrade tensorflow --force-reinstall')"
+./bin/PythonSlicer -c "from slicer.util import pip_install; pip_install('--upgrade tensorflow_addons --force-reinstall')"

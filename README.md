@@ -7,7 +7,7 @@ Computerized medical imaging processing assists neurosurgeons to localize tumour
 Our developed toolkit consists of three main components. First, Slicer-DeepSeg extends the 3D Slicer application and thus provides support for multiple data input/ output data formats and 3D visualization libraries. Second, Slicer core modules offer powerful image processing and analysis utilities. Third, the Slicer-DeepSeg extension provides a customized GUI for brain tumour segmentation using deep learning-based methods. 
 
 ## Results
-The developed Slicer-DeepSeg was validated using a public dataset of high-grade glioma patients. The results showed that our proposed platform considerably outperforms other [3D Slicer](https://www.slicer.org/) cloud-based approaches.  
+The developed Slicer-DeepSeg was validated using a public dataset of high-grade glioma patients. The results showed that our proposed platform considerably outperforms other [3D Slicer](https://www.slicer.org/) cloud-based approaches.
 
 ## Conclusions
 Developed Slicer-DeepSeg allows the development of novel AI-assisted medical applications in neurosurgery. Moreover, it can enhance the outcomes of computer-aided diagnosis of brain tumours.
@@ -19,7 +19,7 @@ Second, click on the "Install Slicer Extensions" button, and choosing Slicer-Dee
 
 
 **[2022_01_01] Update:** The Slicer-DeepSeg has not been added to the official 3D Slicer extension repository yet. However, it can be manually installed in the developper mode according to [the following instructions](https://www.slicer.org/wiki/Documentation/4.10/Training#Developing_and_contributing_extensions_for_3D_Slicer). Please follow the first 10 slides, but choose **Select Extension** instead of **Create Extension** as ilustrated in the tutorial. 
-
+Then, install the Slicer-DeepSeg depencies manually from this [file](install_libraries.txt).
 
 # Use Case Example
 In order to demonstrate the capabilities of using Slicer-DeepSeg extension with 3D Slicer for addressing brain cancer research problems, a sample high-grade glioma (HGG) case from [the BraTS 2020 dataset](https://www.med.upenn.edu/cbica/brats2020/data.html) was employed.
@@ -51,3 +51,4 @@ The work has been published in the Current Directions in Biomedical Engineering,
     
 # Disclaimer
 *Slicer-DeepSeg*, like 3D Slicer, is for research purposes and not intended for clinical use. Therefore, The user assumes full responsibility to comply with the appropriate regulations.
+
