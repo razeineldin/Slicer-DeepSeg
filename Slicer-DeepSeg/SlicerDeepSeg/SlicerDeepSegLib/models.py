@@ -6,7 +6,6 @@ from tensorflow.keras.layers import LeakyReLU, Add, SpatialDropout3D, MaxPooling
 from tensorflow.keras.optimizers import RMSprop, Adam, SGD
 
 from tensorflow_addons.layers import InstanceNormalization
-#from keras_contrib.layers.normalization.instancenormalization import InstanceNormalization
 
 # Define model functions
 def create_convolution_block(input_layer, n_filters, batch_normalization=True, kernel=(3, 3, 3), activation=None,

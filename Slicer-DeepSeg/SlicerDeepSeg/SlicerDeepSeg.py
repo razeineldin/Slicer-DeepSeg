@@ -47,11 +47,11 @@ sys.argv = ["pdm"]
 import tensorflow.python
 import tensorflow as tf
 
-# utlity functions imports
+# Utlity functions imports
 import matplotlib.pyplot as plt
 from tensorflow.keras.utils import get_file
 
-# import functions from our library
+# Import functions from our library
 import SlicerDeepSegLib
 from SlicerDeepSegLib import *
 
@@ -182,10 +182,8 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.addObserver(slicer.mrmlScene, slicer.mrmlScene.StartCloseEvent, self.onSceneStartClose)
     self.addObserver(slicer.mrmlScene, slicer.mrmlScene.EndCloseEvent, self.onSceneEndClose)
 
-    ####################### add your connections here #######################
     # These connections ensure that whenever user changes some settings on the GUI, that is saved in the MRML scene
     # (in the selected parameter node).
-
     self.ui.FLAIRSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.T1Selector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.T1ceSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
@@ -205,8 +203,6 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.restoreDefaultsButton.connect("clicked(bool)", self.onRestoreDefaultsButton)
     self.cancelButton.connect("clicked(bool)", self.onCancelButton)
     self.applyButton.connect("clicked(bool)", self.onApplyButton)
-
-    #########################################################################
 
     # Make sure parameter node is initialized (needed for module reload)
     self.initializeParameterNode()
@@ -302,7 +298,7 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.ui.T2Selector.setCurrentNode(self._parameterNode.GetNodeReference("InputVolume4"))
     self.ui.outputSelector.setCurrentNode(self._parameterNode.GetNodeReference("OutputVolume"))
 
-    # Update buttons states and tooltips
+    # Update processing buttons once the input MRI and tumor output volume exist
     if self._parameterNode.GetNodeReference("InputVolume1") and self._parameterNode.GetNodeReference("OutputVolume"):
       self.cancelButton.toolTip = "Cancel the execution of the module"
       self.cancelButton.enabled = True
@@ -317,6 +313,7 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.applyButton.toolTip = "Select input and output volume nodes"
       self.applyButton.enabled = False
 
+    # Update the output buttons once the model finshes
     if self._parameterNode.GetParameter("Completed") == "True":
       self.ui.toggle3DButton.toolTip = "Toggle the 3D brain tumor model"
       self.ui.toggle3DButton.enabled = True
@@ -330,7 +327,7 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.ui.editSegButton.toolTip = "Apply the algorithm first before manual segmentation!"
       self.ui.editSegButton.enabled = False
 
-    # restore defaults Button
+    # Restore defaults Button
     self.restoreDefaultsButton.toolTip = "Reset to default parameters"
     self.restoreDefaultsButton.enabled = True
 
@@ -436,7 +433,6 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     # Show volume rendering
     displayNode.SetVisibility(True)
 
-
   def hideVolumeRendering(self, volumeNode):
     # Get/create volume rendering display node
     volRenLogic = slicer.modules.volumerendering.logic()
@@ -446,33 +442,39 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     displayNode.SetVisibility(False)
 
-
   def onToggle3DButton(self):
+    # Get the input MRI and the tumor nodes
     brainVolumeNode = self._parameterNode.GetNodeReference("InputVolume1")
     tumorVolumeNode = self._parameterNode.GetNodeReference("OutputVolume")
 
     if self._parameterNode.GetParameter("3DView") == "off":
+        # Show the nodes in the 3D view
+        logging.info("Showing volumed in the 3D View")
         self.showVolumeRenderingMIP(tumorVolumeNode)
         self.showTransparentRendering(brainVolumeNode, 0.3, 60.0)
-  
+        # Trigger the 3DView parameter
+        self._parameterNode.SetParameter("3DView", "on")
+
         # Center the 3D View on the Scene
         layoutManager = slicer.app.layoutManager()
         threeDWidget = layoutManager.threeDWidget(0)
         threeDView = threeDWidget.threeDView()
         threeDView.resetFocalPoint()
 
-        self._parameterNode.SetParameter("3DView", "on")
-
     elif self._parameterNode.GetParameter("3DView") == "on":
+        # Hide the nodes in the 3D view
+        logging.info("Clearing 3D View")
         self.hideVolumeRendering(brainVolumeNode)
         self.hideVolumeRendering(tumorVolumeNode)
-
+        # Trigger the 3DView parameter
         self._parameterNode.SetParameter("3DView", "off")
 
   def show3DView(self):
+    # Get the input MRI and the tumor nodes
     brainVolumeNode = self._parameterNode.GetNodeReference("InputVolume1")
     tumorVolumeNode = self._parameterNode.GetNodeReference("OutputVolume")
 
+    # Show the nodes in the 3D view
     self.showVolumeRenderingMIP(tumorVolumeNode)
     self.showTransparentRendering(brainVolumeNode, 0.3, 60.0)
     self._parameterNode.SetParameter("3DView", "on")
@@ -483,16 +485,17 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     threeDView = threeDWidget.threeDView()
     threeDView.resetFocalPoint()
 
-
-
   def onEditSegButton(self):
     logging.info("Switching to Segment Editor")
 
-    # switch to Segment Editor in order to edit the segments manually
+    # Switch to Segment Editor in order to edit the segments manually
     slicer.util.selectModule("SegmentEditor")
 
   def onRestoreDefaultsButton(self):
     logging.info("Restoring Defaults")
+
+    #self.setParameterNode(self.logic.getParameterNode())
+    self.logic.resetParameters(self._parameterNode)
 
     if not self._parameterNode.GetNodeReference("InputVolume1"):
       firstVolumeNode = slicer.mrmlScene.GetFirstNodeByClass("vtkMRMLScalarVolumeNode") # vtkMRMLSegmentationNode
@@ -505,7 +508,7 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self._parameterNode.SetNodeReferenceID("InputVolume4", None)
     self._parameterNode.SetNodeReferenceID("OutputVolume", None)
 
-    # Advanced parameters
+    # Advanced segmentation parameters
     self.ui.modalitySelector.setCurrentIndex(0)
     self.ui.imageShapeSelector.setCurrentIndex(0)
     self.ui.tumourTypeSelector.setCurrentIndex(0)
@@ -537,80 +540,77 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       inputVolume2 = self.ui.T1Selector.currentNode()
       inputVolume3 = self.ui.T1ceSelector.currentNode()
       inputVolume4 = self.ui.T2Selector.currentNode()
-      segVolumeNode = self.ui.outputSelector.currentNode()
+      outputVolume = self.ui.outputSelector.currentNode()
 
-      # model variables
+      # Model variables
       modalityCount = int(self._parameterNode.GetParameter("MRIsCount"))
       imageShape = np.asarray(self._parameterNode.GetParameter("ImageShape").strip(")(").split(", "))
       tumorType = self._parameterNode.GetParameter("TumorType")
       inputShape = (int(imageShape[0]), int(imageShape[1]), int(imageShape[2]), modalityCount)
 
       if modalityCount ==1: # DeepSeg
-        img1 = slicer.util.arrayFromVolume(inputVolume1)
-        imgs = img1[..., np.newaxis]
+        image1 = slicer.util.arrayFromVolume(inputVolume1)
+        images = image1[..., np.newaxis]
 
       else: # 4 modalities (nnUNet)
-        # get the numpy array(s)
-        img1 = slicer.util.arrayFromVolume(inputVolume1)
-        img2 = slicer.util.arrayFromVolume(inputVolume2)
-        img3 = slicer.util.arrayFromVolume(inputVolume3)
-        img4 = slicer.util.arrayFromVolume(inputVolume4)
+        # Get the numpy array(s) from the input node(s)
+        image1 = slicer.util.arrayFromVolume(inputVolume1)
+        image2 = slicer.util.arrayFromVolume(inputVolume2)
+        image3 = slicer.util.arrayFromVolume(inputVolume3)
+        image4 = slicer.util.arrayFromVolume(inputVolume4)
 
-        imgs = np.stack([img1, img2, img3, img4], axis=3)
+        images = np.stack([image1, image2, image3, image4], axis=3)
 
-      # fix the data structure of nrrd (x,y,z) and numpy (z,y,x)
-      imgs = np.swapaxes(imgs, 0, 2)
+      # Fix the data structure of nrrd (x,y,z) and numpy (z,y,x)
+      images = np.swapaxes(images, 0, 2)
 
       stopTime = time.time()
       logging.info("Loadind data completed in {0:.2f} seconds".format(stopTime-startTime))
       startTime = time.time()
 
-      # preprocess image(s)
-      img_preprocess = self.logic.preprocess_images(imgs, dim=inputShape)
+      # Preprocess the MRI image(s)
+      imagePreprocessed = self.logic.preprocessImages(images, dim=inputShape)
 
-      ### debuging ###
-      #print("img_preprocess:", img_preprocess.shape)
-      #print("img_preprocess 0:", img_preprocess[:,:,:,0].shape)
-      #img_preprocess1 = np.swapaxes(img_preprocess[:,:,:,0], 0, 2)
-      #slicer.util.updateVolumeFromArray(segVolumeNode, img_preprocess1)
+      ### Debuging ###
+      #print("imagePreprocessed:", imagePreprocessed.shape)
+      #print("imagePreprocessed 0:", imagePreprocessed[:,:,:,0].shape)
+      #imagePreprocessed1 = np.swapaxes(imagePreprocessed[:,:,:,0], 0, 2)
+      #slicer.util.updateVolumeFromArray(outputVolume, imagePreprocessed1)
       stopTime = time.time()
       logging.info("Pre-processing data completed in {0:.2f} seconds".format(stopTime-startTime))
       self.progress.setValue(100)
       startTime = time.time()
 
-      # predict tumor boundaries
       self.currentStatusLabel.text = "Downloading"
       self._parameterNode.SetParameter("Status", "downloading")
 
-      if modalityCount == 1: # DeepSeg
+      if modalityCount == 1:
         # Model 1: DeepSeg model
         logging.info("Getting DeepSeg Model")
-        trained_model = SlicerDeepSegLib.models.get_deepSeg(input_shape=inputShape)
+        trainedModel = SlicerDeepSegLib.models.get_deepSeg(input_shape=inputShape)
 
-        # load weights of the pre-trained model
+        # Load weights of the pre-trained model
         # sha1sum model_DeepSeg.h5
         pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_DeepSeg.h5"
         modelPath = get_file(pretrainedURL.split("/")[-1], pretrainedURL,
                     file_hash="88d0a665a6faa08140c70f9bec915fc53ec39687",
                     hash_algorithm="sha256")
 
-        #output_shape=(imgs.shape[0], imgs.shape[1], imgs.shape[2])
-
-      else: # nnUNet
+      else:
         # Model 2: nnU-Net model
         logging.info("Getting nnU-Net Model")
-        trained_model = SlicerDeepSegLib.models.get_nnUNet(input_shape=inputShape)
+        trainedModel = SlicerDeepSegLib.models.get_nnUNet(input_shape=inputShape)
 
-        # load weights of the pre-trained model
+        # Load weights of the pre-trained model
         pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_nnU-Net.h5"
         modelPath = get_file(pretrainedURL.split("/")[-1], pretrainedURL,
                     file_hash="1a1990e9cfcd806231c3bd54aee62240594fee41",
                     hash_algorithm="sha256")
 
-      output_shape=(imgs.shape[0], imgs.shape[1], imgs.shape[2])
+      output_shape=(images.shape[0], images.shape[1], images.shape[2])
 
-      #trained_model.summary(line_length=150)
-      trained_model.load_weights(modelPath) #, by_name=True) 
+      #trainedModel.summary(line_length=150)
+      trainedModel.load_weights(modelPath)
       stopTime = time.time()
       logging.info("Getting pre-trained model completed in {0:.2f} seconds".format(stopTime-startTime))
       self.progress.setValue(400)
@@ -623,15 +623,15 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
       startTime = time.time()
 
-      # predict the tumor boundries
+      # Predict the brain tumor boundries
       self.currentStatusLabel.text = "Predicting"
       self._parameterNode.SetParameter("Status", "predicting")
-      tumor_pred = SlicerDeepSegLib.predict.predict_segmentations(trained_model, img_preprocess, 
+      tumorPrediction = SlicerDeepSegLib.predict.predict_segmentations(trainedModel, imagePreprocessed, 
                   tumor_type = tumorType, output_shape = output_shape)
 
-      # casting to unsigned int and reshape
-      tumor_pred = np.array(tumor_pred).astype(np.uintc)
-      tumor_pred = np.swapaxes(tumor_pred, 0, 2)
+      # Casting to unsigned int and reshape
+      tumorPrediction = np.array(tumorPrediction).astype(np.uintc)
+      tumorPrediction = np.swapaxes(tumorPrediction, 0, 2)
       
       stopTime = time.time()
       logging.info("Prediction completed in {0:.2f} seconds".format(stopTime-startTime))
@@ -641,25 +641,25 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
       startTime = time.time()
 
-      slicer.util.updateVolumeFromArray(segVolumeNode, tumor_pred)
+      slicer.util.updateVolumeFromArray(outputVolume, tumorPrediction)
 
-      # fix the orientation problem
-      segVolumeNode.SetOrigin(inputVolume1.GetOrigin())
-      segVolumeNode.SetSpacing(inputVolume1.GetSpacing())
+      # Fix the orientation problem
+      outputVolume.SetOrigin(inputVolume1.GetOrigin())
+      outputVolume.SetSpacing(inputVolume1.GetSpacing())
       ijkToRasDirections = vtk.vtkMatrix4x4()
       inputVolume1.GetIJKToRASDirectionMatrix(ijkToRasDirections)
-      segVolumeNode.SetIJKToRASDirectionMatrix(ijkToRasDirections)
+      outputVolume.SetIJKToRASDirectionMatrix(ijkToRasDirections)
 
-      # view the segmentation output in slicer
+      # View the segmentation output in slicer
       slicer.util.setSliceViewerLayers(background=inputVolume1)
-      slicer.util.setSliceViewerLayers(foreground=segVolumeNode)
+      slicer.util.setSliceViewerLayers(foreground=outputVolume)
       slicer.util.setSliceViewerLayers(foregroundOpacity=0.5)
 
-      # change the tumor color space
-      displayNode = segVolumeNode.GetDisplayNode()
+      # Change the tumor color space
+      displayNode = outputVolume.GetDisplayNode()
       displayNode.SetAndObserveColorNodeID("vtkMRMLColorTableNodeLabels") #vtkMRMLColorTableNodeRainbow
 
-      # show 3D segmentation
+      # Show 3D segmentation
       self.show3DView()
 
       stopTime = time.time()
@@ -679,12 +679,7 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
 class SlicerDeepSegLogic(ScriptedLoadableModuleLogic):
   """This class should implement all the actual
-  computation done by your module.  The interface
-  should be such that other python code can import
-  this class and make use of the functionality without
-  requiring an instance of the Widget.
-  Uses ScriptedLoadableModuleLogic base class, available at:
-  https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
+  computation done by SlicerDeepSeg. 
   """
 
   def __init__(self):
@@ -713,6 +708,17 @@ class SlicerDeepSegLogic(ScriptedLoadableModuleLogic):
       parameterNode.SetParameter("Status", "idle")
     if not parameterNode.GetParameter("3DView"):
       parameterNode.SetParameter("3DView", "off")
+
+  def resetParameters(self, parameterNode):
+    """
+    Resest parameter node with default settings.
+    """
+    parameterNode.SetParameter("MRIsCount", str(1))
+    parameterNode.SetParameter("ImageShape", "(192, 224, 160)") # 240, 240, 155
+    parameterNode.SetParameter("TumorType", "whole") # all, whole, core, enhancing
+    parameterNode.SetParameter("Completed", "False")
+    parameterNode.SetParameter("Status", "idle")
+    parameterNode.SetParameter("3DView", "off")
 
   def normalizeImage(self, img, norm_type = "norm"):
     if norm_type == "standard_norm": # standarization, same dataset
@@ -745,15 +751,15 @@ class SlicerDeepSegLogic(ScriptedLoadableModuleLogic):
 
     return padded_img
 
-  def preprocess_images(self, imgs, dim):
-    # TODO: automatic cropping using img[~np.all(img == 0, axis=1)]
-    img_preprocess = np.zeros(dim)
-    print("Shape img_preprocess", img_preprocess.shape)
+  def preprocessImages(self, images, dim):
+    # TODO: Automatic cropping using img[~np.all(img == 0, axis=1)]
+    imagePreprocessed = np.zeros(dim)
+    #print("Shape imagePreprocessed", imagePreprocessed.shape)
     for i in range(dim[-1]):
-      img_preprocess[:,:,:,i] = self.cropImage(imgs[:,:,:,i])
-      img_preprocess[:,:,:,i] = self.normalizeImage(img_preprocess[:,:,:,i])
+      imagePreprocessed[:,:,:,i] = self.cropImage(images[:,:,:,i])
+      imagePreprocessed[:,:,:,i] = self.normalizeImage(imagePreprocessed[:,:,:,i])
 
-    return img_preprocess
+    return imagePreprocessed
 
 #
 # SlicerDeepSegTest

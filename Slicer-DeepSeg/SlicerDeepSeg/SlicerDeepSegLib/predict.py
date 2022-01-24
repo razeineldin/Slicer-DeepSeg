@@ -1,4 +1,3 @@
-#from models import *
 # Model imports
 from tensorflow.keras import backend as K
 from tensorflow.keras import Input, Model
@@ -7,7 +6,6 @@ from tensorflow.keras.layers import LeakyReLU, Add, SpatialDropout3D, Conv3DTran
 from tensorflow.keras.optimizers import RMSprop, Adam, SGD
 
 from tensorflow_addons.layers import InstanceNormalization
-#from keras_contrib.layers.normalization.instancenormalization import InstanceNormalization
 
 import numpy as np
 
