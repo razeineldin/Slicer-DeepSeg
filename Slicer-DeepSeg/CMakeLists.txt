@@ -4,13 +4,14 @@ project(Slicer-DeepSeg)
 
 #-----------------------------------------------------------------------------
 # Extension meta-information
-set(EXTENSION_HOMEPAGE "https://www.slicer.org/wiki/Documentation/Nightly/Extensions/Slicer-DeepSeg")
-set(EXTENSION_CATEGORY "Examples")
-set(EXTENSION_CONTRIBUTORS "John Doe (AnyWare Corp.)")
-set(EXTENSION_DESCRIPTION "This is an example of an extension using SuperBuild to build a dependent project named Foo")
-set(EXTENSION_ICONURL "http://www.example.com/Slicer/Extensions/Slicer-DeepSeg.png")
-set(EXTENSION_SCREENSHOTURLS "http://www.example.com/Slicer/Extensions/Slicer-DeepSeg/Screenshots/1.png")
-set(EXTENSION_DEPENDS "NA") # Specified as a list or "NA" if no dependencies
+set(EXTENSION_HOMEPAGE "https://github.com/razeineldin/Slicer-DeepSeg")
+set(EXTENSION_CATEGORY ["Machine Learning", "Segmentation"])
+set(EXTENSION_CONTRIBUTORS "Ramy Zeineldin (Reutlingen University, Karlsruhe Institute of Technology), Pauline Weimann (Reutlingen University)")
+set(EXTENSION_DESCRIPTION """This modules provides a basic interface for brain tumour segmentation using deep learning-based methods
+See more information in <a href="https://github.com/razeineldin/SlicerDeepSeg">module repository</a>.""")
+set(EXTENSION_ICONURL "https://github.com/razeineldin/Slicer-DeepSeg/raw/main/Slicer-DeepSeg/SlicerDeepSeg/Resources/Icons/SlicerDeepSeg.png")
+set(EXTENSION_SCREENSHOTURLS "https://github.com/razeineldin/Slicer-DeepSeg/raw/main/Slicer-DeepSeg_Module_UI.png")
+set(EXTENSION_DEPENDS "SegmentEditor") # Specified as a list or "NA" if no dependencies
 set(EXTENSION_BUILD_SUBDIRECTORY inner-build)
 
 set(SUPERBUILD_TOPLEVEL_PROJECT inner)
