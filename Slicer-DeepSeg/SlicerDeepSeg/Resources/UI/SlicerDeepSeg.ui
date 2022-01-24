@@ -324,9 +324,9 @@
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
-       <widget class="QPushButton" name="show3DButton">
+       <widget class="QPushButton" name="toggle3DButton">
         <property name="text">
-         <string>Show 3D</string>
+         <string>Toggle 3D</string>
         </property>
         <property name="icon">
          <iconset>

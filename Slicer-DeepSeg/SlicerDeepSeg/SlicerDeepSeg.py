@@ -23,10 +23,10 @@ except:
   slicer.util.pip_install("nibabel")
   import nibabel as nib
 try:
-  from nilearn.image import crop_img as crop_image
+  from nilearn.image import crop_img as cropImage
 except:
   slicer.util.pip_install("nilearn")
-  from nilearn.image import crop_img as crop_image
+  from nilearn.image import crop_img as cropImage
 
 import sys
 import time
@@ -199,7 +199,7 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.ui.backgroundSelector.currentIndexChanged.connect(self.onBackgroundSelector)
 
     # Buttons
-    self.ui.show3DButton.connect("clicked(bool)", self.onShow3DButton)
+    self.ui.toggle3DButton.connect("clicked(bool)", self.onToggle3DButton)
     self.ui.editSegButton.connect("clicked(bool)", self.onEditSegButton)
 
     self.restoreDefaultsButton.connect("clicked(bool)", self.onRestoreDefaultsButton)
@@ -304,38 +304,34 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     # Update buttons states and tooltips
     if self._parameterNode.GetNodeReference("InputVolume1") and self._parameterNode.GetNodeReference("OutputVolume"):
-      # cancel Button
       self.cancelButton.toolTip = "Cancel the execution of the module"
       self.cancelButton.enabled = True
-      # apply Button
+
       self.applyButton.toolTip = "Compute output segmentation"
       self.applyButton.enabled = True
 
     else:
-      # cancel Button
       self.cancelButton.toolTip = "Cancel the execution of the module"
       self.cancelButton.enabled = False
-      # apply Button
+
       self.applyButton.toolTip = "Select input and output volume nodes"
       self.applyButton.enabled = False
 
-    if self._parameterNode.GetParameter("completed") == "True":
-      # show 3D Button
-      self.ui.show3DButton.toolTip = "Create 3D Model"
-      self.ui.show3DButton.enabled = True
-      # edit seg Button
-      self.ui.editSegButton.toolTip = "Switch to Segment Editor"
+    if self._parameterNode.GetParameter("Completed") == "True":
+      self.ui.toggle3DButton.toolTip = "Toggle the 3D brain tumor model"
+      self.ui.toggle3DButton.enabled = True
+
+      self.ui.editSegButton.toolTip = "Switch to manual segmentation module"
       self.ui.editSegButton.enabled = True
     else:
-      # show 3D Button
-      self.ui.show3DButton.toolTip = "Apply the algorithm first!"
-      self.ui.show3DButton.enabled = False
-      # edit seg Button
-      self.ui.editSegButton.toolTip = "Apply the algorithm first!"
+      self.ui.toggle3DButton.toolTip = "Apply the algorithm first before showing the 3D brain tumor model!"
+      self.ui.toggle3DButton.enabled = False
+
+      self.ui.editSegButton.toolTip = "Apply the algorithm first before manual segmentation!"
       self.ui.editSegButton.enabled = False
 
     # restore defaults Button
-    self.restoreDefaultsButton.toolTip = "Reset parameters to default"
+    self.restoreDefaultsButton.toolTip = "Reset to default parameters"
     self.restoreDefaultsButton.enabled = True
 
     # All the GUI updates are done
@@ -364,29 +360,29 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     modality = self.ui.modalitySelector.currentIndex
 
     if modality == 0: # FLAIR
-      self._parameterNode.SetParameter("images_num", "1")
+      self._parameterNode.SetParameter("MRIsCount", "1")
     elif modality == 1: # FLAIR, T1, T1ce, T2
-      self._parameterNode.SetParameter("images_num", "4")
+      self._parameterNode.SetParameter("MRIsCount", "4")
 
   def onImageShapeSelector(self):
     imageShape = self.ui.imageShapeSelector.currentIndex
 
     if imageShape == 0: # 240,240,155
-      self._parameterNode.SetParameter("image_shape", "(240, 240, 155)")
+      self._parameterNode.SetParameter("ImageShape", "(240, 240, 155)")
     elif imageShape == 1: # 192,224,160
-      self._parameterNode.SetParameter("image_shape", "(192, 224, 160)")
+      self._parameterNode.SetParameter("ImageShape", "(192, 224, 160)")
 
   def onTumourTypeSelector(self):
     tumourType = self.ui.tumourTypeSelector.currentIndex
 
     if tumourType == 0:
-      self._parameterNode.SetParameter("tumor_type", "whole")
+      self._parameterNode.SetParameter("TumorType", "whole")
     elif tumourType == 1:
-      self._parameterNode.SetParameter("tumor_type", "core")
+      self._parameterNode.SetParameter("TumorType", "core")
     elif tumourType == 2:
-      self._parameterNode.SetParameter("tumor_type", "enhancing")
+      self._parameterNode.SetParameter("TumorType", "enhancing")
     elif tumourType == 3:
-      self._parameterNode.SetParameter("tumor_type", "all")
+      self._parameterNode.SetParameter("TumorType", "all")
 
   def onBackgroundSelector(self):
     viewNode = slicer.app.layoutManager().threeDWidget(0).mrmlViewNode()
@@ -439,19 +435,55 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     gradientOpacityTransferFunction.AddPoint(gradientThreshold+1, maxOpacity)
     # Show volume rendering
     displayNode.SetVisibility(True)
+
+
+  def hideVolumeRendering(self, volumeNode):
+    # Get/create volume rendering display node
+    volRenLogic = slicer.modules.volumerendering.logic()
+    displayNode = volRenLogic.GetFirstVolumeRenderingDisplayNode(volumeNode)
+    if not displayNode:
+      displayNode = volRenLogic.CreateDefaultVolumeRenderingNodes(volumeNode)
+
+    displayNode.SetVisibility(False)
+
+
+  def onToggle3DButton(self):
+    brainVolumeNode = self._parameterNode.GetNodeReference("InputVolume1")
+    tumorVolumeNode = self._parameterNode.GetNodeReference("OutputVolume")
+
+    if self._parameterNode.GetParameter("3DView") == "off":
+        self.showVolumeRenderingMIP(tumorVolumeNode)
+        self.showTransparentRendering(brainVolumeNode, 0.3, 60.0)
   
-  def onShow3DButton(self):
+        # Center the 3D View on the Scene
+        layoutManager = slicer.app.layoutManager()
+        threeDWidget = layoutManager.threeDWidget(0)
+        threeDView = threeDWidget.threeDView()
+        threeDView.resetFocalPoint()
+
+        self._parameterNode.SetParameter("3DView", "on")
+
+    elif self._parameterNode.GetParameter("3DView") == "on":
+        self.hideVolumeRendering(brainVolumeNode)
+        self.hideVolumeRendering(tumorVolumeNode)
+
+        self._parameterNode.SetParameter("3DView", "off")
+
+  def show3DView(self):
     brainVolumeNode = self._parameterNode.GetNodeReference("InputVolume1")
     tumorVolumeNode = self._parameterNode.GetNodeReference("OutputVolume")
 
     self.showVolumeRenderingMIP(tumorVolumeNode)
     self.showTransparentRendering(brainVolumeNode, 0.3, 60.0)
-  
+    self._parameterNode.SetParameter("3DView", "on")
+
     # Center the 3D View on the Scene
     layoutManager = slicer.app.layoutManager()
     threeDWidget = layoutManager.threeDWidget(0)
     threeDView = threeDWidget.threeDView()
     threeDView.resetFocalPoint()
+
+
 
   def onEditSegButton(self):
     logging.info("Switching to Segment Editor")
@@ -497,7 +529,7 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       startTime = time.time()
       logging.info("Pre-processing")
       self.currentStatusLabel.text = "Pre-processing"
-      self._parameterNode.SetParameter("status", "pre-processing")
+      self._parameterNode.SetParameter("Status", "pre-processing")
       self.progress.setValue(0)
       self.progress.show()
 
@@ -508,12 +540,12 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       segVolumeNode = self.ui.outputSelector.currentNode()
 
       # model variables
-      modalityNum = int(self._parameterNode.GetParameter("images_num"))
-      imageShape = np.asarray(self._parameterNode.GetParameter("image_shape").strip(")(").split(", "))
-      tumorType = self._parameterNode.GetParameter("tumor_type")
-      inputShape = (int(imageShape[0]), int(imageShape[1]), int(imageShape[2]), modalityNum)
+      modalityCount = int(self._parameterNode.GetParameter("MRIsCount"))
+      imageShape = np.asarray(self._parameterNode.GetParameter("ImageShape").strip(")(").split(", "))
+      tumorType = self._parameterNode.GetParameter("TumorType")
+      inputShape = (int(imageShape[0]), int(imageShape[1]), int(imageShape[2]), modalityCount)
 
-      if modalityNum ==1: # DeepSeg
+      if modalityCount ==1: # DeepSeg
         img1 = slicer.util.arrayFromVolume(inputVolume1)
         imgs = img1[..., np.newaxis]
 
@@ -548,9 +580,9 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
       # predict tumor boundaries
       self.currentStatusLabel.text = "Downloading"
-      self._parameterNode.SetParameter("status", "downloading")
+      self._parameterNode.SetParameter("Status", "downloading")
 
-      if modalityNum == 1: # DeepSeg
+      if modalityCount == 1: # DeepSeg
         # Model 1: DeepSeg model
         logging.info("Getting DeepSeg Model")
         trained_model = SlicerDeepSegLib.models.get_deepSeg(input_shape=inputShape)
@@ -593,7 +625,7 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
       # predict the tumor boundries
       self.currentStatusLabel.text = "Predicting"
-      self._parameterNode.SetParameter("status", "predicting")
+      self._parameterNode.SetParameter("Status", "predicting")
       tumor_pred = SlicerDeepSegLib.predict.predict_segmentations(trained_model, img_preprocess, 
                   tumor_type = tumorType, output_shape = output_shape)
 
@@ -604,7 +636,7 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       stopTime = time.time()
       logging.info("Prediction completed in {0:.2f} seconds".format(stopTime-startTime))
       self.currentStatusLabel.text = "Completed"
-      self._parameterNode.SetParameter("completed", "True")
+      self._parameterNode.SetParameter("Completed", "True")
       self.progress.setValue(1000)
 
       startTime = time.time()
@@ -628,7 +660,7 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       displayNode.SetAndObserveColorNodeID("vtkMRMLColorTableNodeLabels") #vtkMRMLColorTableNodeRainbow
 
       # show 3D segmentation
-      self.onShow3DButton()
+      self.show3DView()
 
       stopTime = time.time()
       logging.info("Visualization completed in {0:.2f} seconds".format(stopTime-startTime))
@@ -666,21 +698,23 @@ class SlicerDeepSegLogic(ScriptedLoadableModuleLogic):
     """
     Initialize parameter node with default settings.
     """
-    if not parameterNode.GetParameter("images_num"):
+    if not parameterNode.GetParameter("MRIsCount"):
       #images_list = '["case_flair.nii.gz", "case_t1.nii.gz", "case_t1ce.nii.gz", "case_t2.nii.gz"]'
       #images_list = ["case_flair.nii.gz"]
-      parameterNode.SetParameter("images_num", str(1))
-    if not parameterNode.GetParameter("image_shape"):
-      parameterNode.SetParameter("image_shape", "(192, 224, 160)") # 240, 240, 155
-    if not parameterNode.GetParameter("tumor_type"):
-      parameterNode.SetParameter("tumor_type", "whole") # all, whole, core, enhancing
+      parameterNode.SetParameter("MRIsCount", str(1))
+    if not parameterNode.GetParameter("ImageShape"):
+      parameterNode.SetParameter("ImageShape", "(192, 224, 160)") # 240, 240, 155
+    if not parameterNode.GetParameter("TumorType"):
+      parameterNode.SetParameter("TumorType", "whole") # all, whole, core, enhancing
 
-    if not parameterNode.GetParameter("completed"):
-      parameterNode.SetParameter("completed", "False")
-    if not parameterNode.GetParameter("status"):
-      parameterNode.SetParameter("status", "idle")
+    if not parameterNode.GetParameter("Completed"):
+      parameterNode.SetParameter("Completed", "False")
+    if not parameterNode.GetParameter("Status"):
+      parameterNode.SetParameter("Status", "idle")
+    if not parameterNode.GetParameter("3DView"):
+      parameterNode.SetParameter("3DView", "off")
 
-  def norm_image(self, img, norm_type = "norm"):
+  def normalizeImage(self, img, norm_type = "norm"):
     if norm_type == "standard_norm": # standarization, same dataset
         img_mean = img.mean()
         img_std = img.std()
@@ -695,7 +729,7 @@ class SlicerDeepSegLogic(ScriptedLoadableModuleLogic):
 
     return img
 
-  def crop_image(self, img, output_shape=np.array((192, 224, 160))):
+  def cropImage(self, img, output_shape=np.array((192, 224, 160))):
     # manual cropping to (160, 224, 192)
     input_shape = np.array(img.shape)
     # center the cropped image
@@ -716,8 +750,8 @@ class SlicerDeepSegLogic(ScriptedLoadableModuleLogic):
     img_preprocess = np.zeros(dim)
     print("Shape img_preprocess", img_preprocess.shape)
     for i in range(dim[-1]):
-      img_preprocess[:,:,:,i] = self.crop_image(imgs[:,:,:,i])
-      img_preprocess[:,:,:,i] = self.norm_image(img_preprocess[:,:,:,i])
+      img_preprocess[:,:,:,i] = self.cropImage(imgs[:,:,:,i])
+      img_preprocess[:,:,:,i] = self.normalizeImage(img_preprocess[:,:,:,i])
 
     return img_preprocess
 
