@@ -19,7 +19,6 @@ Second, click on the "Install Slicer Extensions" button, and choosing Slicer-Dee
 
 
 **[2022_01_01] Update:** The Slicer-DeepSeg has not been added to the official 3D Slicer extension repository yet. However, it can be manually installed in the developper mode according to [the following instructions](https://www.slicer.org/wiki/Documentation/4.10/Training#Developing_and_contributing_extensions_for_3D_Slicer). Please follow the first 10 slides, but choose **Select Extension** instead of **Create Extension** as ilustrated in the tutorial. 
-Then, install the Slicer-DeepSeg depencies manually from this [file](install_libraries.txt).
 
 # Use Case Example
 In order to demonstrate the capabilities of using Slicer-DeepSeg extension with 3D Slicer for addressing brain cancer research problems, a sample high-grade glioma (HGG) case from [the BraTS 2020 dataset](https://www.med.upenn.edu/cbica/brats2020/data.html) was employed.

@@ -9,17 +9,42 @@ import vtk, qt, ctk, slicer
 from slicer.ScriptedLoadableModule import *
 from slicer.util import VTKObservationMixin
 
+# ExplainSeg dependencies
+try:
+  import numpy as np
+except:
+  slicer.util.pip_install("--upgrade numpy~=1.19.2 --force-reinstall")
+  import numpy as np
+try:
+  import nibabel as nib
+except:
+  slicer.util.pip_install("--upgrade nibabel --force-reinstall")
+  import nibabel as nib
+try:
+  from nilearn.image import crop_img as crop_image
+except:
+  slicer.util.pip_install("--upgrade nilearn --force-reinstall")
+  from nilearn.image import crop_img as crop_image
+try:
+  import tensorflow as tf
+except:
+  slicer.util.pip_install("--upgrade tensorflow --force-reinstall")
+  import tensorflow as tf
+try:
+  import tensorflow_addons
+except:
+  slicer.util.pip_install("--upgrade tensorflow_addons --force-reinstall")
+  import tensorflow_addons
+try:
+  import tensorflow_addons
+except:
+  slicer.util.pip_install("--upgrade tensorflow_addons --force-reinstall")
+  import tensorflow_addons
+
 # Deep learning imports
 sys.argv = ["pdm"]
 import tensorflow.python
-import tensorflow as tf
-
-# Utlity functions imports
-import matplotlib.pyplot as plt
-import numpy as np
-import nibabel as nib
 from tensorflow.keras.utils import get_file
-from nilearn.image import crop_img as cropImage
 
 # SlicerDeepSeg imports
 import SlicerDeepSegLib
@@ -411,39 +436,13 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     displayNode.SetVisibility(False)
 
-  def onToggle3DButton(self):
-    # Get the input MRI and the tumor nodes
-    brainVolumeNode = self._parameterNode.GetNodeReference("InputVolume1")
-    tumorVolumeNode = self._parameterNode.GetNodeReference("OutputVolume")
-
-    if self._parameterNode.GetParameter("3DView") == "off":
-        # Show the nodes in the 3D view
-        logging.info("Showing volumed in the 3D View")
-        self.showVolumeRenderingMIP(tumorVolumeNode)
-        self.showTransparentRendering(brainVolumeNode, 0.3, 60.0)
-        # Trigger the 3DView parameter
-        self._parameterNode.SetParameter("3DView", "on")
-
-        # Center the 3D View on the Scene
-        layoutManager = slicer.app.layoutManager()
-        threeDWidget = layoutManager.threeDWidget(0)
-        threeDView = threeDWidget.threeDView()
-        threeDView.resetFocalPoint()
-
-    elif self._parameterNode.GetParameter("3DView") == "on":
-        # Hide the nodes in the 3D view
-        logging.info("Clearing 3D View")
-        self.hideVolumeRendering(brainVolumeNode)
-        self.hideVolumeRendering(tumorVolumeNode)
-        # Trigger the 3DView parameter
-        self._parameterNode.SetParameter("3DView", "off")
-
   def show3DView(self):
     # Get the input MRI and the tumor nodes
     brainVolumeNode = self._parameterNode.GetNodeReference("InputVolume1")
     tumorVolumeNode = self._parameterNode.GetNodeReference("OutputVolume")
 
     # Show the nodes in the 3D view
+    logging.info("Showing 3D View")
     self.showVolumeRenderingMIP(tumorVolumeNode)
     self.showTransparentRendering(brainVolumeNode, 0.3, 60.0)
     self._parameterNode.SetParameter("3DView", "on")
@@ -453,6 +452,30 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     threeDWidget = layoutManager.threeDWidget(0)
     threeDView = threeDWidget.threeDView()
     threeDView.resetFocalPoint()
+
+    # TODO: Turn off interpolation for tumor
+
+
+  def hide3DView(self):
+    # Get the input MRI and the tumor nodes
+    brainVolumeNode = self._parameterNode.GetNodeReference("InputVolume1")
+    tumorVolumeNode = self._parameterNode.GetNodeReference("OutputVolume")
+
+    # Hide the nodes in the 3D view
+    logging.info("Clearing 3D View")
+    self.hideVolumeRendering(brainVolumeNode)
+    self.hideVolumeRendering(tumorVolumeNode)
+    # Trigger the 3DView parameter
+    self._parameterNode.SetParameter("3DView", "off")
+
+  def onToggle3DButton(self):
+    if self._parameterNode.GetParameter("3DView") == "off":
+        # Show the nodes in the 3D view
+        self.show3DView()
+
+    elif self._parameterNode.GetParameter("3DView") == "on":
+        # Hide the nodes in the 3D view
+        self.hide3DView()
 
   def onEditSegButton(self):
     logging.info("Switching to Segment Editor")
