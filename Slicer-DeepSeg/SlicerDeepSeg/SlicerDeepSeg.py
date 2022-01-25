@@ -560,9 +560,9 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
         # Load weights of the pre-trained model
         # sha1sum model_DeepSeg.h5
-        pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_DeepSeg.h5"
+        pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_DeepSeg_21.h5"
         modelPath = get_file(pretrainedURL.split("/")[-1], pretrainedURL,
-                    file_hash="88d0a665a6faa08140c70f9bec915fc53ec39687",
+                    file_hash="941eb4b2c7da98310a95176e7adabe8f84d2e3df",
                     hash_algorithm="sha256")
 
       else:
