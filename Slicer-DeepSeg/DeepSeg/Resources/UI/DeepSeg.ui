@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Slicer-DeepSeg</class>
- <widget class="qMRMLWidget" name="Slicer-DeepSeg">
+ <class>DeepSeg</class>
+ <widget class="qMRMLWidget" name="DeepSeg">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -388,7 +388,7 @@
  <resources/>
  <connections>
   <connection>
-   <sender>Slicer-DeepSeg</sender>
+   <sender>DeepSeg</sender>
    <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
    <receiver>FLAIRSelector</receiver>
    <slot>setMRMLScene(vtkMRMLScene*)</slot>
@@ -404,7 +404,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>Slicer-DeepSeg</sender>
+   <sender>DeepSeg</sender>
    <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
    <receiver>T1Selector</receiver>
    <slot>setMRMLScene(vtkMRMLScene*)</slot>
@@ -420,7 +420,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>Slicer-DeepSeg</sender>
+   <sender>DeepSeg</sender>
    <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
    <receiver>T1ceSelector</receiver>
    <slot>setMRMLScene(vtkMRMLScene*)</slot>
@@ -436,7 +436,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>Slicer-DeepSeg</sender>
+   <sender>DeepSeg</sender>
    <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
    <receiver>T2Selector</receiver>
    <slot>setMRMLScene(vtkMRMLScene*)</slot>
@@ -452,7 +452,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>Slicer-DeepSeg</sender>
+   <sender>DeepSeg</sender>
    <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
    <receiver>outputSelector</receiver>
    <slot>setMRMLScene(vtkMRMLScene*)</slot>

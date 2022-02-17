@@ -9,7 +9,9 @@ import vtk, qt, ctk, slicer
 from slicer.ScriptedLoadableModule import *
 from slicer.util import VTKObservationMixin
 
-# ExplainSeg dependencies
+# DeepSeg dependencies
+sys.argv = ["pdm"] # important for tensorflow
+
 try:
   import numpy as np
 except:
@@ -40,14 +42,18 @@ try:
 except:
   slicer.util.pip_install("--upgrade tensorflow_addons --force-reinstall")
   import tensorflow_addons
+try:
+  import h5py
+  if h5py.__version__ >= 3.0:
+    slicer.util.pip_install("--upgrade h5py<3.0.0 --force-reinstall")
+except:
+  slicer.util.pip_install("--upgrade h5py<3.0.0 --force-reinstall")
 
 # Deep learning imports
-sys.argv = ["pdm"]
-import tensorflow.python
 from tensorflow.keras.utils import get_file
 
-# SlicerDeepSeg imports
-import SlicerDeepSegLib
+# DeepSeg imports
+import DeepSegLib
 
 # GPU handling (TF 2.X)
 if float(tf.__version__[:3]) >= 2.0:
@@ -66,24 +72,24 @@ if float(tf.__version__[:3]) >= 2.0:
 #ICON_DIR = os.path.dirname(os.path.realpath(__file__)) + "/Resources/Icons/"
 
 #
-# SlicerDeepSeg
+# DeepSeg
 #
 
-class SlicerDeepSeg(ScriptedLoadableModule):
+class DeepSeg(ScriptedLoadableModule):
   """Uses ScriptedLoadableModule base class, available at:
   https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
   """
 
   def __init__(self, parent):
     ScriptedLoadableModule.__init__(self, parent)
-    self.parent.title = "SlicerDeepSeg"
+    self.parent.title = "DeepSeg"
     self.parent.categories = ["Machine Learning", "Segmentation"]
 
     self.parent.dependencies = ["SegmentEditor"]
     self.parent.contributors = ["Ramy Zeineldin (Reutlingen University, Karlsruhe Institute of Technology), Pauline Weimann (Reutlingen University)"]
     self.parent.helpText = """
 This modules provides a basic interface for brain tumour segmentation using deep learning-based methods
-See more information in <a href="https://github.com/razeineldin/SlicerDeepSeg">module repository</a>.
+See more information in <a href="https://github.com/razeineldin/Slicer-DeepSeg">module repository</a>.
 """
     self.parent.acknowledgementText = """
 This module has been done within the Research Group Computer Assisted Medicine (CaMed), Reutlingen University and the Health Robotics and Automation (HERA), Institute for Anthropomatics and Robotics (IAR), Karlsruhe Institute of Technology (KIT), Germany. The authors acknowledge support by the state of Baden-Württemberg through bwHPC. This work is partialy funded by the German Academic Exchange Service (DAAD) under Scholarship No. 91705803.
@@ -91,10 +97,10 @@ This module has been done within the Research Group Computer Assisted Medicine (
 """
 
 #
-# SlicerDeepSegWidget
+# DeepSegWidget
 #
 
-class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
+class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
   """Uses ScriptedLoadableModuleWidget base class, available at:
   https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
   """
@@ -119,7 +125,7 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     # Load widget from .ui file (created by Qt Designer).
     # Additional widgets can be instantiated manually and added to self.layout.
-    uiWidget = slicer.util.loadUI(self.resourcePath("UI/SlicerDeepSeg.ui"))
+    uiWidget = slicer.util.loadUI(self.resourcePath("UI/DeepSeg.ui"))
     self.layout.addWidget(uiWidget)
     self.ui = slicer.util.childWidgetVariables(uiWidget)
 
@@ -130,7 +136,7 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     # Create logic class. Logic implements all computations that should be possible to run
     # in batch mode, without a graphical user interface.
-    self.logic = SlicerDeepSegLogic()
+    self.logic = DeepSegLogic()
 
     # TODO: Convert into .ui file
     # Status and Progress
@@ -579,7 +585,7 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       if modalityCount == 1:
         # Model 1: DeepSeg model
         logging.info("Getting DeepSeg Model")
-        trainedModel = SlicerDeepSegLib.models.get_deepSeg(input_shape=inputShape)
+        trainedModel = DeepSegLib.models.get_deepSeg(input_shape=inputShape)
 
         # Load weights of the pre-trained model
         # sha1sum model_DeepSeg.h5
@@ -591,7 +597,7 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       else:
         # Model 2: nnU-Net model
         logging.info("Getting nnU-Net Model")
-        trainedModel = SlicerDeepSegLib.models.get_nnUNet(input_shape=inputShape)
+        trainedModel = DeepSegLib.models.get_nnUNet(input_shape=inputShape)
 
         # Load weights of the pre-trained model
         pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_nnU-Net.h5"
@@ -618,7 +624,7 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       # Predict the brain tumor boundries
       self.currentStatusLabel.text = "Predicting"
       self._parameterNode.SetParameter("Status", "predicting")
-      tumorPrediction = SlicerDeepSegLib.predict.predict_segmentations(trainedModel, imagePreprocessed, 
+      tumorPrediction = DeepSegLib.predict.predict_segmentations(trainedModel, imagePreprocessed, 
                   tumor_type = tumorType, output_shape = output_shape)
 
       # Casting to unsigned int and reshape
@@ -670,12 +676,12 @@ class SlicerDeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       traceback.print_exc()
 
 #
-# SlicerDeepSegLogic
+# DeepSegLogic
 #
 
-class SlicerDeepSegLogic(ScriptedLoadableModuleLogic):
+class DeepSegLogic(ScriptedLoadableModuleLogic):
   """This class should implement all the actual
-  computation done by SlicerDeepSeg. 
+  computation done by DeepSeg. 
   """
 
   def __init__(self):
@@ -758,10 +764,10 @@ class SlicerDeepSegLogic(ScriptedLoadableModuleLogic):
     return imagePreprocessed
 
 #
-# SlicerDeepSegTest
+# DeepSegTest
 #
 
-class SlicerDeepSegTest(ScriptedLoadableModuleTest):
+class DeepSegTest(ScriptedLoadableModuleTest):
   """
   This is the test case for your scripted module.
   Uses ScriptedLoadableModuleTest base class, available at:
@@ -808,7 +814,7 @@ class SlicerDeepSegTest(ScriptedLoadableModuleTest):
 
     # Test the module logic
 
-    logic = SlicerDeepSegLogic()
+    logic = DeepSegLogic()
 
     # Test algorithm with threshold
     logic.process(inputVolume, outputVolume, threshold, True)
