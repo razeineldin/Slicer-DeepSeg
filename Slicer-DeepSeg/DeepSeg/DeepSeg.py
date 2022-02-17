@@ -44,7 +44,7 @@ except:
   import tensorflow_addons
 try:
   import h5py
-  if h5py.__version__ >= 3.0:
+  if float(h5py.__version__) >= 3.0:
     slicer.util.pip_install("--upgrade h5py<3.0.0 --force-reinstall")
 except:
   slicer.util.pip_install("--upgrade h5py<3.0.0 --force-reinstall")
