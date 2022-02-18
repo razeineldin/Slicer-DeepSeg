@@ -44,10 +44,10 @@ except:
   import tensorflow_addons
 try:
   import h5py
-  if float(h5py.__version__) >= 3.0:
-    slicer.util.pip_install("--upgrade h5py<3.0.0 --force-reinstall")
+  if h5py.__version__ != "2.10.0":
+    slicer.util.pip_install("--upgrade h5py==2.10.0 --force-reinstall")
 except:
-  slicer.util.pip_install("--upgrade h5py<3.0.0 --force-reinstall")
+  slicer.util.pip_install("--upgrade h5py==2.10.0 --force-reinstall")
 
 # Deep learning imports
 from tensorflow.keras.utils import get_file
