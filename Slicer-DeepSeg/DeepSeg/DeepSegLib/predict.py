@@ -29,7 +29,7 @@ def postprocess_tumor(seg_data, tumor_type = "all", output_shape = (240, 240, 15
     if tumor_type == "whole":
         seg_data = get_whole_tumor_mask(seg_data)
     elif tumor_type == "core":
-        pred_seg_datadata = get_tumor_core_mask(seg_data)
+        seg_data = get_tumor_core_mask(seg_data)
     elif tumor_type == "enhancing":
         seg_data = get_enhancing_tumor_mask(seg_data)
 
