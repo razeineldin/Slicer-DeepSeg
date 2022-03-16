@@ -13,41 +13,51 @@ from slicer.util import VTKObservationMixin
 sys.argv = ["pdm"] # important for tensorflow
 
 try:
-  import numpy as np
-except:
-  slicer.util.pip_install("--upgrade numpy~=1.19.2 --force-reinstall")
-  import numpy as np
-try:
   import nibabel as nib
 except:
-  slicer.util.pip_install("--upgrade nibabel --force-reinstall")
+  slicer.util.pip_install("nibabel") # --upgrade --force-reinstall")
   import nibabel as nib
 try:
   from nilearn.image import crop_img as crop_image
 except:
-  slicer.util.pip_install("--upgrade nilearn --force-reinstall")
+  slicer.util.pip_install("nilearn")
   from nilearn.image import crop_img as crop_image
 try:
+  import numpy as np
+except:
+  slicer.util.pip_install("numpy~=1.19.2")
+  import numpy as np
+try:
   import tensorflow as tf
 except:
-  slicer.util.pip_install("--upgrade tensorflow --force-reinstall")
-  import tensorflow as tf
+  try:
+    if sys.version_info >= (3, 7): # Python version
+      slicer.util.pip_install("tensorflow==2.5")
+    else:
+      slicer.util.pip_install("tensorflow==2.4")
+    import tensorflow as tf
+  except:
+    slicer.util.restart()
+    slicer.util.exit() # stop from installing other packages untill restart
 try:
   import tensorflow_addons
 except:
-  slicer.util.pip_install("--upgrade tensorflow_addons --force-reinstall")
-  import tensorflow_addons
+  slicer.util.pip_install("tensorflow_addons")
 try:
-  import tensorflow_addons
+  import skimage
 except:
-  slicer.util.pip_install("--upgrade tensorflow_addons --force-reinstall")
-  import tensorflow_addons
+  try:
+    slicer.util.pip_install("scikit-image")
+    import skimage
+  except:
+    slicer.util.restart()
+    slicer.util.exit() # stop from installing other packages untill restart
 try:
   import h5py
-  if h5py.__version__ != "2.10.0":
-    slicer.util.pip_install("--upgrade h5py==2.10.0 --force-reinstall")
+  if h5py.__version__ != "2.10.0" or "3.6.0" or "3.1.0":
+    slicer.util.pip_install("h5py")
 except:
-  slicer.util.pip_install("--upgrade h5py==2.10.0 --force-reinstall")
+  slicer.util.pip_install("h5py")
 
 # Deep learning imports
 from tensorflow.keras.utils import get_file
