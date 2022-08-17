@@ -598,21 +598,20 @@ class DeepSegWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         trainedModel = DeepSegLib.models.get_deepSeg(input_shape=inputShape)
 
         # Load weights of the pre-trained model
-        # sha1sum model_DeepSeg.h5
+        # sha256sum model_DeepSeg_21.h5
         pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_DeepSeg_21.h5"
         modelPath = get_file(pretrainedURL.split("/")[-1], pretrainedURL,
-                    file_hash="941eb4b2c7da98310a95176e7adabe8f84d2e3df",
+                    file_hash="f26eff69745875d568f51e631f6db7b2db6ce3d0ce1c9a38459c597c8309890e",
                     hash_algorithm="sha256")
-
       else:
-        # Model 2: nnU-Net model
-        logging.info("Getting nnU-Net Model")
-        trainedModel = DeepSegLib.models.get_nnUNet(input_shape=inputShape)
+        # Model 2: Multi-label DeepSeg model
+        logging.info("Getting multi-label DeepSeg Model")
+        trainedModel = DeepSegLib.models.get_deepSeg(input_shape=inputShape, n_labels=4)
 
         # Load weights of the pre-trained model
-        pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_nnU-Net.h5"
+        pretrainedURL = "https://github.com/razeineldin/Test_Data/raw/main/model_multi_DeepSeg.h5"
         modelPath = get_file(pretrainedURL.split("/")[-1], pretrainedURL,
-                    file_hash="1a1990e9cfcd806231c3bd54aee62240594fee41",
+                    file_hash="65b6fb0eb8fed5349376fd0dde68edefa10a60f6a821d14af1d3114a45a8edfa",
                     hash_algorithm="sha256")
 
       output_shape=(images.shape[0], images.shape[1], images.shape[2])
